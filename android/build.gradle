@@ -1,9 +1,4 @@
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-    }
-}
+
 subprojects {
     afterEvaluate { project ->
         if (project.hasProperty('android')) {
@@ -23,18 +18,26 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
-
-tasks.register("clean", Delete) {
-    delete rootProject.buildDir
-}
-buildscript {
+buildscript{
     ext.kotlin_version = '1.7.10'  // or newer
-    repositories {
+    repositories{
         google()
+        jcenter()
         mavenCentral()
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:7.3.1'  // or newer
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath 'com.google.gms:google-services:4.4.2'
     }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+tasks.register("clean", Delete) {
+    delete rootProject.buildDir
 }
