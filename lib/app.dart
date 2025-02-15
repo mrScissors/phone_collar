@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screens/call_logs/call_logs_screen.dart';
+import 'screens/call_logs/home.dart';
 
 class CallLogApp extends StatelessWidget {
   const CallLogApp({super.key});
