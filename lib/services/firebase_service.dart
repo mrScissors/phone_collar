@@ -26,26 +26,6 @@ class FirebaseService {
     await _database.child(path).remove();
   }
 
-  Future<String> getCallerName(String? phoneNumber) async {
-    if (phoneNumber == null) return 'Unknown';
-
-    final formattedNumber = formatPhoneNumber(phoneNumber);
-
-    try {
-      final snapshot = await readData('callers/$formattedNumber');
-
-      if (snapshot.exists) {
-        final caller = Caller.fromMap(snapshot.value as Map<dynamic, dynamic>);
-        return caller.name;
-      }
-
-      return formattedNumber;
-    } catch (e) {
-      print('Error fetching caller name: $e');
-      return formattedNumber;
-    }
-  }
-
 
   Future<List<Caller>> searchByName(String query) async {
     try {

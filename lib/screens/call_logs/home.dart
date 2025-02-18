@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:call_log/call_log.dart';
 import '../../../services/firebase_service.dart';
 import '../../../services/call_log_service.dart';
+import '../../services/notification_service.dart';
 import '../search_results_screen.dart';
 import 'widgets/call_log_tile.dart';
+import '../../call_event_channel.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 enum SearchType { name, number }
 
@@ -22,13 +25,52 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
   List<CallLogEntry> _filteredCallLogs = [];
   bool _isSearching = false;
   SearchType _searchType = SearchType.name;
-
+  late FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
   @override
   void initState() {
     super.initState();
     _initializeData();
+    _initializeNotifications();
     //_searchController.addListener(_onSearchChanged);
+    // Listen for incoming call events.
+    CallEventChannel.incomingCallStream.listen((number) {
+      _firebaseService.searchByNumber(number).then((snapshot) {
+        if (mounted) {  // Check if widget is still mounted
+          String displayName;
+          if (snapshot != null && snapshot.isNotEmpty) {
+            // Safely extract the name
+            try {
+              displayName = snapshot.first.name;
+            } catch (e) {
+              displayName = number ?? 'Unknown';
+              print('Error accessing snapshot data: $e');
+            }
+          } else {
+            displayName = number ?? 'Unknown';
+          }
+          NotificationService.showIncomingCallNotification(displayName);
+        }
+      }).catchError((error) {
+        print('Error searching by number: $error');
+        if (mounted) {
+          NotificationService.showIncomingCallNotification(number ?? 'Unknown');
+        }
+      });
+    });
   }
+
+  Future<void> _initializeNotifications() async {
+    flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+    const AndroidInitializationSettings androidSettings =
+    AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    const InitializationSettings initSettings =
+    InitializationSettings(android: androidSettings);
+
+    await flutterLocalNotificationsPlugin.initialize(initSettings);
+  }
+
+
 
   @override
   void dispose() {

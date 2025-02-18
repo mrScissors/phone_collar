@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:call_log/call_log.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../models/caller.dart';
 import '../../../services/firebase_service.dart';
 
 class CallLogTile extends StatelessWidget {
@@ -164,14 +165,23 @@ class CallLogTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<String>(
-      future: firebaseService.getCallerName(callLogEntry.number ?? ''),
+    return FutureBuilder<List<Caller>>(
+      future: firebaseService.searchByNumber(callLogEntry.number ?? ''),
       builder: (context, snapshot) {
-        String displayName =
-        snapshot.connectionState == ConnectionState.done && snapshot.hasData
-            ? snapshot.data!
-            : callLogEntry.number ?? 'Unknown';
+        String displayName;
 
+        if (snapshot.connectionState == ConnectionState.done &&
+            snapshot.hasData &&
+            snapshot.data!.isNotEmpty) {
+          try {
+            displayName = snapshot.data!.first.name;
+          } catch (e) {
+            print('Error accessing caller data: $e');
+            displayName = callLogEntry.number ?? 'Unknown';
+          }
+        } else {
+          displayName = callLogEntry.number ?? 'Unknown';
+        }
         return ListTile(
           title: Text(displayName),
           subtitle: Text(
