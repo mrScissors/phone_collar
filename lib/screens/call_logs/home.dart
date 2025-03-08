@@ -7,6 +7,7 @@ import '../search_results_screen.dart';
 import 'widgets/call_log_tile.dart';
 import '../../call_event_channel.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 enum SearchType { name, number }
 
@@ -24,39 +25,72 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
   List<CallLogEntry> _callLogs = [];
   List<CallLogEntry> _filteredCallLogs = [];
   bool _isSearching = false;
+  bool _isLoadingCallLogs = true;
+  bool _isLoadingFirebase = true;
   SearchType _searchType = SearchType.name;
   late FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
   @override
   void initState() {
     super.initState();
-    _initializeData();
     _initializeNotifications();
-    //_searchController.addListener(_onSearchChanged);
-    // Listen for incoming call events.
-    CallEventChannel.incomingCallStream.listen((number) {
-      _firebaseService.searchByNumber(number).then((snapshot) {
-        if (mounted) {  // Check if widget is still mounted
-          String displayName;
-          if (snapshot != null && snapshot.isNotEmpty) {
-            // Safely extract the name
-            try {
-              displayName = snapshot.first.name;
-            } catch (e) {
-              displayName = number ?? 'Unknown';
-              print('Error accessing snapshot data: $e');
-            }
-          } else {
-            displayName = number ?? 'Unknown';
-          }
-          NotificationService.showIncomingCallNotification(displayName);
-        }
-      }).catchError((error) {
-        print('Error searching by number: $error');
+    _requestNotificationPermission();
+
+    // Initialize Firebase and call logs in parallel
+    _initializeFirebase();
+    _fetchCallLogs();
+
+    // Set up call event listener
+    _setupCallEventListener();
+  }
+
+  Future<void> _initializeFirebase() async {
+    await _firebaseService.initializeWithCallersData();
+    if (mounted) {
+      setState(() {
+        _isLoadingFirebase = false;
+      });
+    }
+  }
+
+  Future<void> _fetchCallLogs() async {
+    final logs = await _callLogService.getCallLogs();
+    if (mounted) {
+      setState(() {
+        _callLogs = logs;
+        _filteredCallLogs = logs;
+        _isLoadingCallLogs = false;
+      });
+    }
+  }
+
+  void _setupCallEventListener() {
+    CallEventChannel.incomingCallStream.listen((number) async {
+      if (!mounted) return;
+
+      try {
+        final snapshot = await _firebaseService.searchByNumber(number);
+        final displayName = snapshot?.isNotEmpty == true
+            ? snapshot!.first.name
+            : number ?? 'Unknown';
+
+        NotificationService.showIncomingCallNotification(displayName);
+      } catch (e) {
+        print('Error in call event listener: $e');
         if (mounted) {
           NotificationService.showIncomingCallNotification(number ?? 'Unknown');
         }
-      });
+      }
     });
+  }
+
+  Future<void> _requestNotificationPermission() async {
+    if (Theme.of(context).platform == TargetPlatform.android) {
+      // Request notification permission for Android 13+
+      final status = await Permission.notification.status;
+      if (!status.isGranted) {
+        await Permission.notification.request();
+      }
+    }
   }
 
   Future<void> _initializeNotifications() async {
@@ -81,14 +115,6 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
   Future<void> _initializeData() async {
     await _firebaseService.initializeWithCallersData();
     await _fetchCallLogs();
-  }
-
-  Future<void> _fetchCallLogs() async {
-    final logs = await _callLogService.getCallLogs();
-    setState(() {
-      _callLogs = logs;
-      _filteredCallLogs = logs;
-    });
   }
 
   void _onSearchChanged() async {
@@ -205,22 +231,43 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
           ),
         ),
       ),
-      body: _callLogs.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : _isSearching && _filteredCallLogs.isEmpty
-          ? Center(
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_isLoadingCallLogs) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Loading call logs...'),
+          ],
+        ),
+      );
+    }
+
+    if (_callLogs.isEmpty) {
+      return const Center(child: Text('No call logs found'));
+    }
+
+    if (_isSearching && _filteredCallLogs.isEmpty) {
+      return Center(
         child: Text(
-            _searchType == SearchType.name
-                ? 'No calls found for this name'
-                : 'No calls found for this number'
+          _searchType == SearchType.name
+              ? 'No calls found for this name'
+              : 'No calls found for this number',
         ),
-      )
-          : ListView.builder(
-        itemCount: _filteredCallLogs.length,
-        itemBuilder: (context, index) => CallLogTile(
-          callLogEntry: _filteredCallLogs[index],
-          firebaseService: _firebaseService,
-        ),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: _filteredCallLogs.length,
+      itemBuilder: (context, index) => CallLogTile(
+        callLogEntry: _filteredCallLogs[index],
+        firebaseService: _firebaseService,
       ),
     );
   }

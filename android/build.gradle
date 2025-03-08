@@ -8,6 +8,13 @@ subprojects {
                 }
             }
         }
+        if (project.plugins.hasPlugin("com.android.application") ||
+                project.plugins.hasPlugin("com.android.library")) {
+            project.android {
+                compileSdkVersion 34
+                buildToolsVersion "34.0.0"
+            }
+        }
     }
 }
 rootProject.buildDir = "../build"
@@ -19,7 +26,7 @@ subprojects {
 }
 
 buildscript{
-    ext.kotlin_version = '1.7.10'  // or newer
+    ext.kotlin_version = '2.0.20'  // or newer
     repositories{
         google()
         jcenter()

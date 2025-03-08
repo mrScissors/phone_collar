@@ -19,21 +19,33 @@ class SearchResultsScreen extends StatelessWidget {
         itemBuilder: (context, index) {
           final log = results[index];
           final name = log.name ?? 'Unknown';
-          final number = log.phone ?? 'No Number';
+          // Ensure phoneNumbers is a List<String> and filter out blank or "na" values
+          final List<String> numbers = (log.phoneNumbers is List<String>)
+              ? (log.phoneNumbers as List<String>)
+              .where((number) =>
+          number.trim().isNotEmpty &&
+              number.trim().toLowerCase() != 'na' &&
+
+              number != "<NA>")
+              .toList()
+              : [];
+
+          final numberDisplay =
+          numbers.isEmpty ? 'No Number' : numbers.join(', ');
 
           return ListTile(
             title: Text(name),
-            subtitle: Text(number),
+            subtitle: Text(numberDisplay),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
                   icon: Icon(Icons.call, color: Colors.green),
-                  onPressed: () => _makePhoneCall(number),
+                  onPressed: () => _makePhoneCall(context, numbers),
                 ),
                 IconButton(
                   icon: Icon(Icons.message, color: Colors.blue),
-                  onPressed: () => _sendMessage(number),
+                  onPressed: () => _sendMessage(context, numbers),
                 ),
               ],
             ),
@@ -43,19 +55,75 @@ class SearchResultsScreen extends StatelessWidget {
     );
   }
 
-  void _makePhoneCall(String number) async {
-    final Uri launchUri = Uri(
-      scheme: 'tel',
-      path: number,
-    );
-    await launchUrl(launchUri);
+  void _makePhoneCall(BuildContext context, List<String> numbers) async {
+    if (numbers.isEmpty) return;
+    if (numbers.length == 1) {
+      final Uri launchUri = Uri(
+        scheme: 'tel',
+        path: numbers.first,
+      );
+      await launchUrl(launchUri);
+    } else {
+      final selectedNumber = await showDialog<String>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: Text('Select Number to Call'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: numbers.map((number) {
+                return ListTile(
+                  title: Text(number),
+                  onTap: () => Navigator.of(context).pop(number),
+                );
+              }).toList(),
+            ),
+          );
+        },
+      );
+      if (selectedNumber != null) {
+        final Uri launchUri = Uri(
+          scheme: 'tel',
+          path: selectedNumber,
+        );
+        await launchUrl(launchUri);
+      }
+    }
   }
 
-  void _sendMessage(String number) async {
-    final Uri launchUri = Uri(
-      scheme: 'sms',
-      path: number,
-    );
-    await launchUrl(launchUri);
+  void _sendMessage(BuildContext context, List<String> numbers) async {
+    if (numbers.isEmpty) return;
+    if (numbers.length == 1) {
+      final Uri launchUri = Uri(
+        scheme: 'sms',
+        path: numbers.first,
+      );
+      await launchUrl(launchUri);
+    } else {
+      final selectedNumber = await showDialog<String>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: Text('Select Number to Message'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: numbers.map((number) {
+                return ListTile(
+                  title: Text(number),
+                  onTap: () => Navigator.of(context).pop(number),
+                );
+              }).toList(),
+            ),
+          );
+        },
+      );
+      if (selectedNumber != null) {
+        final Uri launchUri = Uri(
+          scheme: 'sms',
+          path: selectedNumber,
+        );
+        await launchUrl(launchUri);
+      }
+    }
   }
 }

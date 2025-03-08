@@ -1,4 +1,5 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -40,6 +41,17 @@ class NotificationService {
       badge: true,
       sound: true,
     );
+  }
+  Future<void> requestNotificationPermissions() async {
+    // For Android 13 and above (API level 33)
+    if (await Permission.notification.isDenied) {
+      await Permission.notification.request();
+    }
+  }
+
+  // Call this method when your app starts
+  Future<void> setupNotifications() async {
+    await requestNotificationPermissions();
   }
 
   static Future<void> showIncomingCallNotification(String number) async {

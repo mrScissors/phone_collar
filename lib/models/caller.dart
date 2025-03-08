@@ -1,22 +1,30 @@
 class Caller {
-  final String phone;
+  final List<String> phoneNumbers;
   final String name;
 
   const Caller({
-    required this.phone,
+    required this.phoneNumbers,
     required this.name,
   });
 
   factory Caller.fromMap(Map<dynamic, dynamic> map) {
     return Caller(
-      phone: map['phone'] as String,
-      name: map['name'] as String,
+      phoneNumbers: [
+        map['Phone 1 - Value'],
+        map['Phone 2 - Value'],
+        map['Phone 3 - Value']
+      ]
+          .whereType<String>() // Ensure only strings are considered
+          .map((number) => number.trim()) // Trim whitespace
+          .where((number) => number.isNotEmpty && number.toLowerCase() != 'na') // Remove empty and 'na' values
+          .toList(),
+      name: map['First Name'] as String? ?? 'Unknown', // Handle missing name gracefully
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
-      'phone': phone,
+      'phone': phoneNumbers,
       'name': name,
     };
   }

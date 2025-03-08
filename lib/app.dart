@@ -7,6 +7,7 @@ class CallLogApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Call Log App',
       theme: ThemeData(primarySwatch: Colors.orange),
       home: const CallLogsScreen(),

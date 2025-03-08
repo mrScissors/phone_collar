@@ -2,6 +2,8 @@ import 'package:firebase_database/firebase_database.dart';
 import '../models/caller.dart';
 import '../utils/phone_number_formatter.dart';
 import '../utils/search_name_formatter.dart';
+import 'package:contacts_service/contacts_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class FirebaseService {
   final DatabaseReference _database = FirebaseDatabase.instance.ref();
@@ -65,34 +67,101 @@ class FirebaseService {
 
   Future<List<Caller>> searchByNumber(String number) async {
     try {
+      // Request contact permissions
+      PermissionStatus permissionStatus = await Permission.contacts.status;
+      if (!permissionStatus.isGranted) {
+        permissionStatus = await Permission.contacts.request();
+        if (!permissionStatus.isGranted) {
+          print('Contact permission denied');
+          return [];
+        }
+      }
+
+      // Format the number for consistency
       final cleanNumber = formatPhoneNumber(number);
 
+      // Search in the phone's contacts first
+      Iterable<Contact> contacts = await ContactsService.getContacts(withThumbnails: false);
+      for (Contact contact in contacts) {
+        for (Item phone in contact.phones ?? []) {
+          final formattedContactNumber = formatPhoneNumber(phone.value ?? '');
+          if (formattedContactNumber.contains(cleanNumber)) {
+            // If found in contacts, return it as a Caller object
+            return [
+              Caller(
+                name: contact.displayName ?? 'Unknown',
+                phoneNumbers: [formattedContactNumber],
+              )
+            ];
+          }
+        }
+      }
+
+      // If not found in contacts, search in Firebase
       final DataSnapshot snapshot = await _database
           .child('callers')
-          .orderByChild('phone')
+          .orderByChild('Phone 1 - Value')
           .startAt(cleanNumber)
           .endAt(cleanNumber + '\uf8ff')
           .limitToFirst(10)
           .get();
 
-      if (!snapshot.exists) {
-        return [];
-      }
+      if (snapshot.exists) {
+        List<Caller> callers = [];
+        Map<dynamic, dynamic> callersMap = snapshot.value as Map<dynamic, dynamic>;
 
-      List<Caller> callers = [];
-      // Convert the snapshot to a map and handle the data
-      Map<dynamic, dynamic> callersMap = snapshot.value as Map<dynamic, dynamic>;
-
-      callersMap.forEach((key, value) {
-        // Convert each caller data to a Map<String, dynamic>
-        Map<String, dynamic> callerData = Map<String, dynamic>.from(value);
-
-        // Create Caller object using the fromJson factory constructor
-        Caller caller = Caller.fromMap(callerData);
-
-        callers.add(caller);
+        callersMap.forEach((key, value) {
+          Map<String, dynamic> callerData = Map<String, dynamic>.from(value);
+          Caller caller = Caller.fromMap(callerData);
+          callers.add(caller);
         });
         return callers;
+      }
+      else{
+        final DataSnapshot snapshot = await _database
+            .child('callers')
+            .orderByChild('Phone 2 - Value')
+            .startAt(cleanNumber)
+            .endAt(cleanNumber + '\uf8ff')
+            .limitToFirst(10)
+            .get();
+
+        if (snapshot.exists) {
+          List<Caller> callers = [];
+          Map<dynamic, dynamic> callersMap = snapshot.value as Map<dynamic, dynamic>;
+
+          callersMap.forEach((key, value) {
+            Map<String, dynamic> callerData = Map<String, dynamic>.from(value);
+            Caller caller = Caller.fromMap(callerData);
+            callers.add(caller);
+          });
+          return callers;
+        }
+        else{
+          final DataSnapshot snapshot = await _database
+              .child('callers')
+              .orderByChild('Phone 3 - Value')
+              .startAt(cleanNumber)
+              .endAt(cleanNumber + '\uf8ff')
+              .limitToFirst(10)
+              .get();
+
+          if (snapshot.exists) {
+            List<Caller> callers = [];
+            Map<dynamic, dynamic> callersMap = snapshot.value as Map<dynamic, dynamic>;
+
+            callersMap.forEach((key, value) {
+              Map<String, dynamic> callerData = Map<String, dynamic>.from(value);
+              Caller caller = Caller.fromMap(callerData);
+              callers.add(caller);
+            });
+            return callers;
+          }
+        }
+      }
+      return [];
+
+
     } catch (e) {
       print('Error searching by number: $e');
       return [];

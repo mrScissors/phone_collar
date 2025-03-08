@@ -14,6 +14,8 @@ void main() async {
   await requestCallLogPermission();
   await Firebase.initializeApp();
   await NotificationService.initialize();
+  final notificationService = NotificationService();
+  await notificationService.setupNotifications();
   const AndroidInitializationSettings initializationSettingsAndroid =
   AndroidInitializationSettings('@mipmap/ic_launcher');
   const DarwinInitializationSettings initializationSettingsIOS =
