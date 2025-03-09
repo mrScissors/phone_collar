@@ -6,7 +6,9 @@ import 'package:contacts_service/contacts_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class FirebaseService {
-  final DatabaseReference _database = FirebaseDatabase.instance.ref();
+  final DatabaseReference _database = FirebaseDatabase.instance.ref('callers');
+  bool _isInitialized = false;
+  List<Caller> _callersCache = [];
 
   Future<void> initializeWithCallersData() async {
     final snapshot = await readData('callers');
@@ -52,7 +54,7 @@ class FirebaseService {
 
       callersMap.forEach((key, value) {
         Map<String, dynamic> callerData = Map<String, dynamic>.from(value);
-        Caller caller = Caller.fromMap(callerData);
+        Caller caller = Caller.fromMapRemoteDb(callerData);
         callers.add(caller);
       });
 
@@ -91,6 +93,7 @@ class FirebaseService {
               Caller(
                 name: contact.displayName ?? 'Unknown',
                 phoneNumbers: [formattedContactNumber],
+                searchName: ''
               )
             ];
           }
@@ -112,7 +115,7 @@ class FirebaseService {
 
         callersMap.forEach((key, value) {
           Map<String, dynamic> callerData = Map<String, dynamic>.from(value);
-          Caller caller = Caller.fromMap(callerData);
+          Caller caller = Caller.fromMapRemoteDb(callerData);
           callers.add(caller);
         });
         return callers;
@@ -132,7 +135,7 @@ class FirebaseService {
 
           callersMap.forEach((key, value) {
             Map<String, dynamic> callerData = Map<String, dynamic>.from(value);
-            Caller caller = Caller.fromMap(callerData);
+            Caller caller = Caller.fromMapRemoteDb(callerData);
             callers.add(caller);
           });
           return callers;
@@ -152,7 +155,7 @@ class FirebaseService {
 
             callersMap.forEach((key, value) {
               Map<String, dynamic> callerData = Map<String, dynamic>.from(value);
-              Caller caller = Caller.fromMap(callerData);
+              Caller caller = Caller.fromMapRemoteDb(callerData);
               callers.add(caller);
             });
             return callers;
@@ -197,5 +200,90 @@ class FirebaseService {
       print('Error updating contact: $e');
       throw e;
     }
+  }
+
+
+  Future<List<Caller>> getAllContacts() async {
+    if (!_isInitialized) await initializeWithCallersData();
+    final snapshot = await _database.get();
+    if (snapshot.exists) {
+      _callersCache = _parseCallers(snapshot);
+    }
+    return List.from(_callersCache);
+  }
+
+  List<Caller> _parseCallers(DataSnapshot snapshot) {
+    final callers = <Caller>[];
+
+    // Check if snapshot.value is a List
+    if (snapshot.value is List) {
+      final dataList = snapshot.value as List<Object?>;
+
+      for (var i = 0; i < dataList.length; i++) {
+        if (dataList[i] is Map<dynamic, dynamic>) {
+          final value = dataList[i] as Map<dynamic, dynamic>;
+          try {
+            List<String> phoneNumbersMapped = [];
+
+            // Safely concatenate phone numbers if they exist
+            if (value['Phone 1 - Value'] != null && !containsAlphabet(value['Phone 1 - Value'])) {
+              phoneNumbersMapped.add(value['Phone 1 - Value'].toString());
+            }
+            if (value['Phone 2 - Value'] != null && !containsAlphabet(value['Phone 2 - Value'])) {
+              //phoneNumbersMapped += phoneNumbersMapped.isNotEmpty ? ', ' : '';
+              phoneNumbersMapped.add(value['Phone 2 - Value'].toString());
+            }
+            if (value['Phone 3 - Value'] != null && !containsAlphabet(value['Phone 3 - Value'])) {
+              //phoneNumbersMapped += phoneNumbersMapped.isNotEmpty ? ', ' : '';
+              phoneNumbersMapped.add(value['Phone 3 - Value'].toString());
+            }
+
+            final caller = Caller(
+              name: value['First Name'] as String? ?? 'Unknown',
+              phoneNumbers: phoneNumbersMapped,
+              searchName: value['searchName'] as String? ?? '',
+            );
+            callers.add(caller);
+          } catch (e) {
+            print('Error parsing caller data: $e');
+          }
+        }
+      }
+      // Check if snapshot.value is a Map
+    } else if (snapshot.value is Map) {
+      final data = snapshot.value as Map<dynamic, dynamic>;
+
+      data.forEach((key, value) {
+        if (value is Map<dynamic, dynamic>) {
+          try {
+            List<String>  phoneNumbersMapped = [];
+
+            // Safely concatenate phone numbers if they exist
+            if (value['Phone 1 - Value'] != null && !containsAlphabet(value['Phone 1 - Value'])) {
+              phoneNumbersMapped.add(value['Phone 1 - Value'].toString());
+            }
+            if (value['Phone 2 - Value'] != null && !containsAlphabet(value['Phone 2 - Value'])) {
+              //phoneNumbersMapped += phoneNumbersMapped.isNotEmpty ? ', ' : '';
+              phoneNumbersMapped.add(value['Phone 2 - Value'].toString());
+            }
+            if (value['Phone 3 - Value'] != null && !containsAlphabet(value['Phone 3 - Value'])) {
+              //phoneNumbersMapped += phoneNumbersMapped.isNotEmpty ? ', ' : '';
+              phoneNumbersMapped.add(value['Phone 3 - Value'].toString());
+            }
+
+            final caller = Caller(
+              name: value['name'] as String? ?? 'Unknown',
+              phoneNumbers: phoneNumbersMapped,
+              searchName: value['searchName'] as String? ?? '',
+            );
+            callers.add(caller);
+          } catch (e) {
+            print('Error parsing caller data: $e');
+          }
+        }
+      });
+    }
+
+    return callers;
   }
 }

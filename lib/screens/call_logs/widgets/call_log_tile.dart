@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:call_log/call_log.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../models/caller.dart';
-import '../../../services/firebase_service.dart';
+import '../../../services/local_db_service.dart';
 
 class CallLogTile extends StatelessWidget {
   final CallLogEntry callLogEntry;
-  final FirebaseService firebaseService;
+  final LocalDbService localDbService;
 
   const CallLogTile({
     super.key,
     required this.callLogEntry,
-    required this.firebaseService,
+    required this.localDbService,
   });
 
   Future<void> _makePhoneCall(String phoneNumber) async {
@@ -165,22 +165,21 @@ class CallLogTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<Caller>>(
-      future: firebaseService.searchByNumber(callLogEntry.number ?? ''),
+    return FutureBuilder<Caller?>(
+      future: localDbService.getContactByNumber(callLogEntry.number ?? ''),
       builder: (context, snapshot) {
         String displayName;
 
         if (snapshot.connectionState == ConnectionState.done &&
-            snapshot.hasData &&
-            snapshot.data!.isNotEmpty) {
+            snapshot.hasData) {
           try {
-            displayName = snapshot.data!.first.name;
+            displayName = snapshot.data!.name;
           } catch (e) {
             print('Error accessing caller data: $e');
-            displayName = callLogEntry.number ?? 'Unknown';
+            displayName = callLogEntry.number ?? 'Unknown1';
           }
         } else {
-          displayName = callLogEntry.number ?? 'Unknown';
+          displayName = callLogEntry.number ?? 'Unknown2';
         }
         return ListTile(
           title: Text(displayName),
@@ -195,7 +194,7 @@ class CallLogTile extends StatelessWidget {
           onTap: () => _showOptions(
             context,
             displayName,
-            callLogEntry.number ?? 'Unknown',
+            callLogEntry.number ?? 'Unknown3',
           ),
         );
       },

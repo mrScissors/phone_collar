@@ -13,7 +13,7 @@ class SearchResultsScreen extends StatelessWidget {
         title: Text('Search Results'),
       ),
       body: results.isEmpty
-          ? Center(child: Text('No results found.'))
+          ? Center(child: Text('No results found, try syncing contacts.'))
           : ListView.builder(
         itemCount: results.length,
         itemBuilder: (context, index) {
