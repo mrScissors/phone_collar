@@ -172,15 +172,11 @@ class FirebaseService {
   }
 
   // Method to add a new contact
-  Future<void> addContact(String name, String phone) async {
+  Future<void> addContact(Caller contact) async {
     try {
-      final newContactRef = _database.child('callers').push();
-      await newContactRef.set({
-        'name': name,
-        'phone': phone,
-        'searchName': formatSearchName(name),
-        'timestamp': ServerValue.timestamp,
-      });
+      final newContactRef = _database.push();
+      final data = contact.toMapRemoteDb();
+      await newContactRef.set(data);
     } catch (e) {
       print('Error adding contact: $e');
       throw e;

@@ -50,14 +50,15 @@ class LocalDbService {
         {
           'name': contact.name,
           'phoneNumbers': contact.phoneNumbers.join(', '),
-          'searchName': contact.searchName
+          'searchName': contact.searchName // Allowing duplicates
         },
-        conflictAlgorithm: ConflictAlgorithm.replace,
+        conflictAlgorithm: ConflictAlgorithm.ignore, // Prevent overwriting
       );
     }
 
     await batch.commit(noResult: true);
   }
+
 
   Future<Caller?> getContactByNumber(String? number) async {
     try {
@@ -128,18 +129,7 @@ class LocalDbService {
 
     List<Caller> localSearchResult = [];
 
-    // Request contact permissions
-    PermissionStatus permissionStatus = await Permission.contacts.status;
-    if (!permissionStatus.isGranted) {
-      permissionStatus = await Permission.contacts.request();
-      if (!permissionStatus.isGranted) {
-        print('Contact permission denied');
-        return localSearchResult;
-      }
-    }
-
     try {
-      // Search contacts by name using the query parameter.
       final contacts = await ContactsService.getContacts(query: query, withThumbnails: false);
 
       if (contacts.isNotEmpty) {
@@ -209,17 +199,65 @@ class LocalDbService {
     return results.map(Caller.fromMapLocalDb).toList();
   }
 
-/*
-  Caller _mapToCaller(Map<String, dynamic> map) {
-    final phoneNumbersString = map['phoneNumbers'] as String;
-    // Split the string by commas and trim each number to remove extra spaces.
-    final phoneNumbersList = phoneNumbersString.split(',').map((number) => number.trim()).toList();
-
-    return Caller(
-      name: map['name'] as String,
-      phoneNumbers: phoneNumbersList,
-    );
+  Future<void> saveContact(Caller caller) async {
+    try {
+      // Ensure database is initialized
+      if (_database == null) {
+        await initialize();
+      }
+      var phoneNumbersForLocalDb = caller.phoneNumbers.join(',');
+      await _database!.insert('contacts', {
+        'name': caller.name,
+        'searchName': caller.searchName,
+        'phoneNumbers': phoneNumbersForLocalDb
+      });
+      print('Contact saved to local DB: ${caller.name}');
+    } catch (e) {
+      print('Error saving contact to local DB: $e');
+      throw Exception('Failed to save contact to local database: $e');
+    }
   }
 
- */
+  Future<List<Caller>?> searchContactsByT9Name(String t9Pattern) async {
+    if (t9Pattern.isEmpty) {
+      return [];
+    }
+
+    String sqlPattern = '';
+    for (int i = 0; i < t9Pattern.length; i++) {
+      if (t9Pattern[i] == '[') {
+        // Find the closing bracket
+        int closingBracket = t9Pattern.indexOf(']', i);
+        if (closingBracket != -1) {
+          // Extract characters between brackets
+          String chars = t9Pattern.substring(i + 1, closingBracket);
+          // Add each character as an alternative with %
+          sqlPattern += '(';
+          for (int j = 0; j < chars.length; j++) {
+            sqlPattern += chars[j];
+            if (j < chars.length - 1) {
+              sqlPattern += '|';
+            }
+          }
+          sqlPattern += ')';
+          // Skip to after closing bracket
+          i = closingBracket;
+        }
+      } else {
+        // Add non-bracket characters directly
+        sqlPattern += t9Pattern[i];
+      }
+    }
+
+    // Using a raw query for regex matching
+    // Note: SQLite regex support may be limited - you might need to use multiple LIKE clauses instead
+    final List<Map<String, Object?>>? maps = await _database?.rawQuery('''
+    SELECT * FROM $_tableName 
+    WHERE searchName REGEXP ?
+  ''', ['^$sqlPattern.*']);
+
+    return maps?.map((map) {
+      return Caller.fromMapLocalDb(map);
+    }).toList();
+  }
 }

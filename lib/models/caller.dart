@@ -33,11 +33,21 @@ class Caller {
     );
   }
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toMapRemoteDb() {
     return {
-      'phone': phoneNumbers,
+      'Phone 1 - Value': (phoneNumbers != null && phoneNumbers.length > 0) ? phoneNumbers[0] : '',
+      'Phone 2 - Value': (phoneNumbers != null && phoneNumbers.length > 1) ? phoneNumbers[1] : '',
+      'Phone 3 - Value': (phoneNumbers != null && phoneNumbers.length > 2) ? phoneNumbers[2] : '',
+      'First Name': name,
+      'searchName': searchName,
+    };
+  }
+
+  Map<String, dynamic> toMapLocalDb() {
+    return {
+      'phoneNumbers': phoneNumbers.join(','),
       'name': name,
-      'searchName': searchName
+      'searchName': searchName,
     };
   }
 }
