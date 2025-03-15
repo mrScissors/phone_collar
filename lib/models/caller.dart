@@ -1,3 +1,5 @@
+import '../utils/phone_number_formatter.dart';
+
 class Caller {
   final List<String> phoneNumbers;
   final String name;
@@ -10,20 +12,48 @@ class Caller {
   });
 
   factory Caller.fromMapRemoteDb(Map<dynamic, dynamic> map) {
+    String firstName = (map['First Name'] as String?)?.trim() ?? '';
+    String middleName = map['Middle Name'] != "None"?map['Middle Name'].trim() : '';
+    String lastName = map['Last Name'] != "None"?map['Middle Name'].trim() : '';
+
+    List<String> nameParts = [];
+    if (firstName.isNotEmpty) {
+      nameParts.add(firstName);
+    }
+    if (middleName.isNotEmpty) {
+      nameParts.add(middleName);
+    }
+    if (lastName.isNotEmpty) {
+      nameParts.add(lastName);
+    }
+    String fullName = nameParts.isNotEmpty ? nameParts.join(' ') : 'Unknown';
+
+
+    List<String> phoneNumbersMapped = [];
+
+    if (map['Phone 1 - Value'] != null && !containsAlphabet(map['Phone 1 - Value'])) {
+      phoneNumbersMapped.add(map['Phone 1 - Value'].toString());
+    }
+    if (map['Phone 2 - Value'] != null && !containsAlphabet(map['Phone 2 - Value'])) {
+      //phoneNumbersMapped += phoneNumbersMapped.isNotEmpty ? ', ' : '';
+      phoneNumbersMapped.add(map['Phone 2 - Value'].toString());
+    }
+    if (map['Phone 3 - Value'] != null && !containsAlphabet(map['Phone 3 - Value'])) {
+      //phoneNumbersMapped += phoneNumbersMapped.isNotEmpty ? ', ' : '';
+      phoneNumbersMapped.add(map['Phone 3 - Value'].toString());
+    }
+
     return Caller(
-      phoneNumbers: [
-        map['Phone 1 - Value'],
-        map['Phone 2 - Value'],
-        map['Phone 3 - Value']
-      ]
-          .whereType<String>() // Ensure only strings are considered
-          .map((number) => number.trim()) // Trim whitespace
-          .where((number) => number.isNotEmpty && number.toLowerCase() != 'na') // Remove empty and 'na' values
-          .toList(),
-      name: map['First Name'] as String? ?? 'Unknown', // Handle missing name gracefully
-      searchName: map['searchName']
+        phoneNumbers: phoneNumbersMapped
+            .whereType<String>()
+            .map((number) => number.trim())
+            .where((number) => number.isNotEmpty && number.toLowerCase() != 'na')
+            .toList(),
+        name: fullName,
+        searchName: map['searchName']
     );
   }
+
 
   factory Caller.fromMapLocalDb(Map<dynamic, dynamic> map) {
     return Caller(
