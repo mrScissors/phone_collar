@@ -93,7 +93,8 @@ class FirebaseService {
               Caller(
                 name: contact.displayName ?? 'Unknown',
                 phoneNumbers: [formattedContactNumber],
-                searchName: ''
+                searchName: '',
+                employeeName: 'PhoneContact'
               )
             ];
           }
@@ -233,26 +234,7 @@ class FirebaseService {
       data.forEach((key, value) {
         if (value is Map<dynamic, dynamic>) {
           try {
-            List<String>  phoneNumbersMapped = [];
-
-            // Safely concatenate phone numbers if they exist
-            if (value['Phone 1 - Value'] != null && !containsAlphabet(value['Phone 1 - Value'])) {
-              phoneNumbersMapped.add(value['Phone 1 - Value'].toString());
-            }
-            if (value['Phone 2 - Value'] != null && !containsAlphabet(value['Phone 2 - Value'])) {
-              //phoneNumbersMapped += phoneNumbersMapped.isNotEmpty ? ', ' : '';
-              phoneNumbersMapped.add(value['Phone 2 - Value'].toString());
-            }
-            if (value['Phone 3 - Value'] != null && !containsAlphabet(value['Phone 3 - Value'])) {
-              //phoneNumbersMapped += phoneNumbersMapped.isNotEmpty ? ', ' : '';
-              phoneNumbersMapped.add(value['Phone 3 - Value'].toString());
-            }
-
-            final caller = Caller(
-              name: value['name'] as String? ?? 'Unknown',
-              phoneNumbers: phoneNumbersMapped,
-              searchName: value['searchName'] as String? ?? '',
-            );
+            final caller = Caller.fromMapRemoteDb(value);
             callers.add(caller);
           } catch (e) {
             print('Error parsing caller data: $e');

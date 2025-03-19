@@ -10,7 +10,6 @@ import '../../services/notification_service.dart';
 import 'widgets/call_log_tile.dart';
 import '../../call_event_channel.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-//import 'package:permission_handler/permission_handler.dart';
 import '../../../services/local_db_service.dart';
 import 'package:contacts_service/contacts_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -30,7 +29,6 @@ class CallLogsScreen extends StatefulWidget {
 class _CallLogsScreenState extends State<CallLogsScreen> {
   final CallLogService _callLogService = CallLogService();
   final FirebaseService _firebaseService = FirebaseService();
-  // Removed internal instantiation of LocalDbService; now use widget.localDbService
   final TextEditingController _searchController = TextEditingController();
   List<CallLogEntry> _callLogs = [];
   List<CallLogEntry> _filteredCallLogs = [];
@@ -103,7 +101,9 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const CircularProgressIndicator(),
+                CircularProgressIndicator(
+                  color: Theme.of(context).colorScheme.primary, // Orange color
+                ),
                 const SizedBox(height: 20),
                 const Text('Syncing contacts...'),
                 const SizedBox(height: 10),
@@ -131,9 +131,10 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
       for (Contact contact in contactsLocal) {
         var searchName = formatSearchName(contact.displayName ?? '');
         var callerLocal = Caller(
-          name: contact.displayName ?? 'Unknown',
-          phoneNumbers: contact.phones?.map((item) => item.value ?? '').toList() ?? [],
-          searchName: searchName,
+            name: contact.displayName ?? 'Unknown',
+            phoneNumbers: contact.phones?.map((item) => item.value ?? '').toList() ?? [],
+            searchName: searchName,
+            employeeName: 'PhoneContact'
         );
         callersLocal.add(callerLocal);
       }
@@ -257,8 +258,11 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
     });
   }
 
-  void _showAddContactForm({String? prefillNumber}) {
+  void showAddContactForm({String? prefillNumber}) {
+    // Capture the parent context.
+    final parentContext = context;
     final nameController = TextEditingController();
+    final employeeNameController = TextEditingController();
     final phoneNumber1Controller = TextEditingController(
         text: !containsAlphabet(prefillNumber ?? '') ? prefillNumber : '');
     final phoneNumber2Controller = TextEditingController();
@@ -266,55 +270,103 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
     bool isLoading = false;
 
     showDialog(
-      context: context,
+      context: parentContext,
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: const Text('Add New Contact'),
+              title: Text('Add New Contact',
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary)),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     TextField(
                       controller: nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Name',
-                        prefixIcon: Icon(Icons.person),
+                      decoration: InputDecoration(
+                        labelText: 'Contact Name',
+                        prefixIcon: Icon(Icons.person,
+                            color: Theme.of(context).colorScheme.primary),
+                        labelStyle: TextStyle(
+                            color: Theme.of(context).colorScheme.primary),
+                        focusedBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(
+                              color: Theme.of(context).colorScheme.primary),
+                        ),
                       ),
                       keyboardType: TextInputType.name,
                     ),
                     const SizedBox(height: 10),
                     TextField(
                       controller: phoneNumber1Controller,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Phone Number 1 (required)',
-                        prefixIcon: Icon(Icons.phone),
+                        prefixIcon: Icon(Icons.phone,
+                            color: Theme.of(context).colorScheme.primary),
+                        labelStyle: TextStyle(
+                            color: Theme.of(context).colorScheme.primary),
+                        focusedBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(
+                              color: Theme.of(context).colorScheme.primary),
+                        ),
                       ),
                       keyboardType: TextInputType.phone,
                     ),
                     const SizedBox(height: 10),
                     TextField(
                       controller: phoneNumber2Controller,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Phone Number 2 (optional)',
-                        prefixIcon: Icon(Icons.phone),
+                        prefixIcon: Icon(Icons.phone,
+                            color: Theme.of(context).colorScheme.primary),
+                        labelStyle: TextStyle(
+                            color: Theme.of(context).colorScheme.primary),
+                        focusedBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(
+                              color: Theme.of(context).colorScheme.primary),
+                        ),
                       ),
                       keyboardType: TextInputType.phone,
                     ),
                     const SizedBox(height: 10),
                     TextField(
                       controller: phoneNumber3Controller,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Phone Number 3 (optional)',
-                        prefixIcon: Icon(Icons.phone),
+                        prefixIcon: Icon(Icons.phone,
+                            color: Theme.of(context).colorScheme.primary),
+                        labelStyle: TextStyle(
+                            color: Theme.of(context).colorScheme.primary),
+                        focusedBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(
+                              color: Theme.of(context).colorScheme.primary),
+                        ),
                       ),
                       keyboardType: TextInputType.phone,
                     ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: employeeNameController,
+                      decoration: InputDecoration(
+                        labelText: 'Employee Name',
+                        prefixIcon: Icon(Icons.badge,
+                            color: Theme.of(context).colorScheme.primary),
+                        labelStyle: TextStyle(
+                            color: Theme.of(context).colorScheme.primary),
+                        focusedBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(
+                              color: Theme.of(context).colorScheme.primary),
+                        ),
+                      ),
+                      keyboardType: TextInputType.name,
+                    ),
                     if (isLoading)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 20.0),
-                        child: CircularProgressIndicator(),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 20.0),
+                        child: CircularProgressIndicator(
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                       ),
                   ],
                 ),
@@ -322,21 +374,31 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
               actions: [
                 TextButton(
                   onPressed: () {
+                    // Dismiss keyboard before closing.
+                    FocusScope.of(context).unfocus();
                     Navigator.of(context).pop();
                   },
-                  child: const Text('Cancel'),
+                  child: Text('Cancel',
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary)),
                 ),
                 TextButton(
                   onPressed: isLoading
                       ? null
                       : () async {
+                    // Dismiss keyboard.
+                    FocusScope.of(context).unfocus();
+
                     final name = nameController.text.trim();
+                    final employeeName =
+                    employeeNameController.text.trim();
                     final phone1 = phoneNumber1Controller.text.trim();
 
                     if (name.isEmpty || phone1.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      ScaffoldMessenger.of(parentContext).showSnackBar(
                         const SnackBar(
-                          content: Text('Name and Phone Number 1 are required'),
+                          content: Text(
+                              'Name and Phone Number 1 are required'),
                           backgroundColor: Colors.red,
                         ),
                       );
@@ -351,16 +413,19 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
                       List<String> phoneNumbers = [];
                       if (phone1.isNotEmpty) phoneNumbers.add(phone1);
 
-                      final phone2 = phoneNumber2Controller.text.trim();
+                      final phone2 =
+                      phoneNumber2Controller.text.trim();
                       if (phone2.isNotEmpty) phoneNumbers.add(phone2);
 
-                      final phone3 = phoneNumber3Controller.text.trim();
+                      final phone3 =
+                      phoneNumber3Controller.text.trim();
                       if (phone3.isNotEmpty) phoneNumbers.add(phone3);
 
                       final searchName = formatSearchName(name);
 
                       final caller = Caller(
                         name: name,
+                        employeeName: employeeName,
                         phoneNumbers: phoneNumbers,
                         searchName: searchName,
                       );
@@ -368,9 +433,12 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
                       await widget.localDbService.saveContact(caller);
                       await _firebaseService.addContact(caller);
 
+                      // Close the dialog.
                       Navigator.of(context).pop();
 
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      // Use the parent context to show the Snackbar.
+                      ScaffoldMessenger.of(parentContext)
+                          .showSnackBar(
                         const SnackBar(
                           content: Text('Contact added successfully'),
                           backgroundColor: Colors.green,
@@ -378,9 +446,11 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
                       );
                     } catch (e) {
                       print('Error adding contact: $e');
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      ScaffoldMessenger.of(parentContext)
+                          .showSnackBar(
                         SnackBar(
-                          content: Text('Failed to add contact: ${e.toString()}'),
+                          content: Text(
+                              'Failed to add contact: ${e.toString()}'),
                           backgroundColor: Colors.red,
                         ),
                       );
@@ -392,7 +462,9 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
                       }
                     }
                   },
-                  child: const Text('Save'),
+                  child: Text('Save',
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary)),
                 ),
               ],
             );
@@ -402,31 +474,34 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
     );
   }
 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Call Logs'),
+        backgroundColor: Theme.of(context).colorScheme.primary, // Orange background
+        foregroundColor: Theme.of(context).colorScheme.onPrimary, // Black text
         actions: [
           _isSyncingContacts
-              ? const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.0),
+              ? Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Center(
               child: SizedBox(
                 width: 20,
                 height: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onPrimary, // Black color
                 ),
               ),
             ),
           )
               : TextButton.icon(
-            icon: const Icon(Icons.sync, color: Colors.black),
-            label: const Text(
+            icon: Icon(Icons.sync, color: Theme.of(context).colorScheme.onPrimary),
+            label: Text(
               'Sync Contacts',
-              style: TextStyle(color: Colors.black),
+              style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
             ),
             onPressed: syncContacts,
           ),
@@ -439,10 +514,10 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Enter name or number to search',
-                prefixIcon: const Icon(Icons.search),
+                prefixIcon: Icon(Icons.search, color: Theme.of(context).colorScheme.primary),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
-                  icon: const Icon(Icons.clear),
+                  icon: Icon(Icons.clear, color: Theme.of(context).colorScheme.primary),
                   onPressed: () {
                     _searchController.clear();
                     setState(() {
@@ -455,6 +530,11 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
                     : null,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
                 ),
                 filled: true,
                 fillColor: Colors.white,
@@ -469,8 +549,10 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
       ),
       body: _buildBody(),
       floatingActionButton: FloatingActionButton(
-        onPressed: _showAddContactForm,
+        onPressed: showAddContactForm,
         tooltip: 'Add Contact',
+        backgroundColor: Theme.of(context).colorScheme.primary, // Orange
+        foregroundColor: Theme.of(context).colorScheme.onPrimary, // Black
         child: const Icon(Icons.person_add),
       ),
     );
@@ -489,7 +571,7 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
         context: context,
         builder: (context) {
           return AlertDialog(
-            title: const Text('Select Number to Call'),
+            title: Text('Select Number to Call', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: numbers.map((number) {
@@ -525,7 +607,7 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
         context: context,
         builder: (context) {
           return AlertDialog(
-            title: const Text('Select Number to Message'),
+            title: Text('Select Number to Message', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: numbers.map((number) {
@@ -571,23 +653,35 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
                           ? _searchController.text
                           : ''
                     ]),
-                    icon: const Icon(Icons.call, color: Colors.white),
+                    icon: const Icon(Icons.call),
                     label: const Text('Call'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary, // Orange
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary, // Black
+                    ),
                   ),
                   const SizedBox(width: 10),
                   ElevatedButton.icon(
                     onPressed: () => _sendMessage([_searchController.text]),
-                    icon: const Icon(Icons.message, color: Colors.white),
+                    icon: const Icon(Icons.message),
                     label: const Text('Message'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary, // Orange
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary, // Black
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 20),
               ElevatedButton.icon(
                 onPressed: () =>
-                    _showAddContactForm(prefillNumber: _searchController.text),
-                icon: const Icon(Icons.person_add, color: Colors.white),
+                    showAddContactForm(prefillNumber: _searchController.text),
+                icon: const Icon(Icons.person_add),
                 label: const Text('Add Contact'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.primary, // Orange
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary, // Black
+                ),
               ),
             ],
           ),
@@ -602,16 +696,29 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
                 .toList();
             return ListTile(
               title: Text(caller.name),
-              subtitle: Text(numbers.isNotEmpty ? numbers.join(', ') : 'No Number'),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(numbers.isNotEmpty ? numbers.join(', ') : 'No Number'),
+                  if (caller.employeeName.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4.0),
+                      child: Text(
+                        'Employee: ${caller.employeeName}',
+                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                    ),
+                ],
+              ),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.call, color: Colors.green),
+                    icon: Icon(Icons.call, color: Theme.of(context).colorScheme.primary),
                     onPressed: () => _makePhoneCall(numbers),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.message, color: Colors.blue),
+                    icon: Icon(Icons.message, color: Theme.of(context).colorScheme.primary),
                     onPressed: () => _sendMessage(numbers),
                   ),
                 ],
@@ -624,13 +731,15 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
         );
       }
     } else if (_isLoadingCallLogs) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Loading call logs...'),
+            CircularProgressIndicator(
+              color: Theme.of(context).colorScheme.primary, // Orange color
+            ),
+            const SizedBox(height: 16),
+            const Text('Loading call logs...'),
           ],
         ),
       );

@@ -26,7 +26,8 @@ class LocalDbService {
           CREATE TABLE $_tableName(
             name TEXT,
             phoneNumbers TEXT,
-            searchName TEXT
+            searchName TEXT,
+            employeeName TEXT
           )
           ''',
         );
@@ -50,7 +51,8 @@ class LocalDbService {
         {
           'name': contact.name,
           'phoneNumbers': contact.phoneNumbers.join(', '),
-          'searchName': contact.searchName // Allowing duplicates
+          'searchName': contact.searchName,
+          'employeeName': contact.employeeName
         },
         conflictAlgorithm: ConflictAlgorithm.ignore, // Prevent overwriting
       );
@@ -98,7 +100,8 @@ class LocalDbService {
           return Caller(
               name: contact.displayName ?? number,
               phoneNumbers: [formattedNumber],
-              searchName: ''
+              searchName: '',
+              employeeName: 'PhoneContact'
           );
         }
       } catch (e) {
@@ -137,7 +140,8 @@ class LocalDbService {
           var localCaller = Caller(
               name: contact.displayName ?? query,
               phoneNumbers: contact.phones?.map((item) => item.toString()).toList() ?? [],
-              searchName: ''
+              searchName: '',
+              employeeName: 'PhoneContact'
           );
           localSearchResult.add(localCaller);
         }
@@ -181,7 +185,8 @@ class LocalDbService {
         var localCaller =  Caller(
             name: contact.displayName ?? formattedQuery,
             phoneNumbers: contact.phones!.map((item) => item.toString()).toList(),
-            searchName: ''
+            searchName: '',
+            employeeName: 'PhoneContact'
         );
         localSearchResult.add(localCaller);
       }
@@ -209,7 +214,8 @@ class LocalDbService {
       await _database!.insert('contacts', {
         'name': caller.name,
         'searchName': caller.searchName,
-        'phoneNumbers': phoneNumbersForLocalDb
+        'phoneNumbers': phoneNumbersForLocalDb,
+        'employeeName': caller.employeeName
       });
       print('Contact saved to local DB: ${caller.name}');
     } catch (e) {

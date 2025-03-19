@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:phone_collar/services/local_db_service.dart';
-import 'callLogsAndSearch.dart'; // Only call logs screen is imported
+import 'callLogsAndSearch.dart';
 
 class HomeScreen extends StatefulWidget {
   final LocalDbService localDbService;

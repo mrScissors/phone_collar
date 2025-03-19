@@ -31,89 +31,98 @@ class CallLogTile extends StatelessWidget {
   }
 
   void _showOptions(BuildContext context, String displayName, String phoneNumber) {
+    final theme = Theme.of(context);
+    final primaryColor = theme.colorScheme.primary; // Orange color from theme
+    final onBackgroundColor = theme.colorScheme.onBackground;
+
     showModalBottomSheet(
       context: context,
+      backgroundColor: theme.colorScheme.background, // Use theme background color (likely black)
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => StatefulBuilder( // Add StatefulBuilder here
+      builder: (context) => StatefulBuilder(
         builder: (context, setState) => Container(
           padding: const EdgeInsets.all(16),
-          child: SingleChildScrollView( // Add SingleChildScrollView
+          child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   displayName,
-                  style: Theme.of(context).textTheme.titleLarge,
+                  style: theme.textTheme.titleLarge?.copyWith(color: onBackgroundColor),
                 ),
                 Text(
                   phoneNumber,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Colors.grey,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: onBackgroundColor.withOpacity(0.6),
                   ),
                 ),
                 const SizedBox(height: 20),
                 ListTile(
-                  leading: const Icon(Icons.call, color: Colors.green),
-                  title: const Text('Call'),
+                  leading: Icon(Icons.call, color: primaryColor),
+                  title: Text('Call', style: TextStyle(color: onBackgroundColor)),
                   onTap: () {
                     Navigator.pop(context);
                     _makePhoneCall(phoneNumber);
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.message, color: Colors.blue),
-                  title: const Text('Message'),
+                  leading: Icon(Icons.message, color: primaryColor),
+                  title: Text('Message', style: TextStyle(color: onBackgroundColor)),
                   onTap: () {
                     Navigator.pop(context);
                     _sendSMS(phoneNumber);
                   },
                 ),
-                FutureBuilder<List<CallLogEntry>>(  // Changed Iterable to List
+                FutureBuilder<List<CallLogEntry>>(
                   future: fetchCallLogs(phoneNumber),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
+                      return Center(
                         child: Padding(
                           padding: EdgeInsets.all(16.0),
-                          child: CircularProgressIndicator(),
+                          child: CircularProgressIndicator(color: primaryColor),
                         ),
                       );
                     }
 
                     if (snapshot.hasError) {
                       return ListTile(
-                        leading: const Icon(Icons.error, color: Colors.red),
-                        title: const Text('Error loading call logs'),
-                        subtitle: Text(snapshot.error.toString()),
+                        leading: Icon(Icons.error, color: theme.colorScheme.error),
+                        title: Text('Error loading call logs', style: TextStyle(color: onBackgroundColor)),
+                        subtitle: Text(snapshot.error.toString(), style: TextStyle(color: onBackgroundColor.withOpacity(0.6))),
                       );
                     }
 
                     final calls = snapshot.data ?? [];
 
                     if (calls.isEmpty) {
-                      return const ListTile(
-                        leading: Icon(Icons.history, color: Colors.grey),
-                        title: Text('No recent calls found'),
+                      return ListTile(
+                        leading: Icon(Icons.history, color: onBackgroundColor.withOpacity(0.6)),
+                        title: Text('No recent calls found', style: TextStyle(color: onBackgroundColor)),
                       );
                     }
 
                     return ExpansionTile(
-                      leading: const Icon(Icons.history, color: Colors.orange),
-                      title: Text('Recent Calls (last 30 days) (${calls.length})'),
+                      leading: Icon(Icons.history, color: primaryColor),
+                      title: Text('Recent Calls (last 30 days) (${calls.length})',
+                          style: TextStyle(color: onBackgroundColor)),
+                      collapsedIconColor: primaryColor,
+                      iconColor: primaryColor,
                       children: calls.map((call) => ListTile(
                         dense: true,
-                        leading: Icon(_getCallTypeIcon(call.callType)),
+                        leading: Icon(_getCallTypeIcon(call.callType),
+                            color: call.callType == CallType.missed ? theme.colorScheme.error : primaryColor),
                         title: Text(
                           '${call.duration} seconds',
-                          style: const TextStyle(fontSize: 14),
+                          style: TextStyle(fontSize: 14, color: onBackgroundColor),
                         ),
                         subtitle: Text(
                           DateTime.fromMillisecondsSinceEpoch(call.timestamp ?? 0)
                               .toLocal()
                               .toString(),
-                          style: const TextStyle(fontSize: 12),
+                          style: TextStyle(fontSize: 12, color: onBackgroundColor.withOpacity(0.6)),
                         ),
                       )).toList(),
                     );
@@ -128,19 +137,15 @@ class CallLogTile extends StatelessWidget {
   }
 
   Future<List<CallLogEntry>> fetchCallLogs(String phoneNumber) async {
+    // No changes needed here
     try {
-      // Normalize the phone number by removing any non-digit characters
       final normalizedNumber = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
-
-      // Get logs from the last 30 days
       final now = DateTime.now();
       final thirtyDaysAgo = now.subtract(const Duration(days: 30));
-
       final logs = await CallLog.query(
         number: normalizedNumber,
         dateFrom: thirtyDaysAgo.millisecondsSinceEpoch,
       );
-
       return logs.toList();
     } catch (e) {
       print('Error fetching call logs: $e');
@@ -149,6 +154,7 @@ class CallLogTile extends StatelessWidget {
   }
 
   IconData _getCallTypeIcon(CallType? callType) {
+    // No changes needed here
     switch (callType) {
       case CallType.outgoing:
         return Icons.call_made;
@@ -165,6 +171,10 @@ class CallLogTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final primaryColor = theme.colorScheme.primary; // Orange from theme
+    final onBackgroundColor = theme.colorScheme.onBackground;
+
     return FutureBuilder<Caller?>(
       future: localDbService.getContactByNumber(callLogEntry.number ?? ''),
       builder: (context, snapshot) {
@@ -182,14 +192,15 @@ class CallLogTile extends StatelessWidget {
           displayName = callLogEntry.number ?? 'Unknown2';
         }
         return ListTile(
-          title: Text(displayName),
+          title: Text(displayName, style: TextStyle(color: onBackgroundColor)),
           subtitle: Text(
             'Type: ${callLogEntry.callType.toString().split('.').last} | '
                 'Date: ${DateTime.fromMillisecondsSinceEpoch(callLogEntry.timestamp ?? 0).toLocal()}',
+            style: TextStyle(color: onBackgroundColor.withOpacity(0.6)),
           ),
           leading: Icon(
             _getCallTypeIcon(callLogEntry.callType),
-            color: callLogEntry.callType == CallType.missed ? Colors.red : null,
+            color: callLogEntry.callType == CallType.missed ? theme.colorScheme.error : primaryColor,
           ),
           onTap: () => _showOptions(
             context,
@@ -200,5 +211,4 @@ class CallLogTile extends StatelessWidget {
       },
     );
   }
-
 }

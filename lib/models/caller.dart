@@ -4,17 +4,19 @@ class Caller {
   final List<String> phoneNumbers;
   final String name;
   final String searchName;
+  final String employeeName;
 
   const Caller({
     required this.phoneNumbers,
     required this.name,
-    required this.searchName
+    required this.searchName,
+    required this.employeeName
   });
 
   factory Caller.fromMapRemoteDb(Map<dynamic, dynamic> map) {
     String firstName = (map['First Name'] as String?)?.trim() ?? '';
     String middleName = map['Middle Name'] != "None"?map['Middle Name'].trim() : '';
-    String lastName = map['Last Name'] != "None"?map['Middle Name'].trim() : '';
+    String lastName = map['Last Name'] != "None"?map['Last Name'].trim() : '';
 
     List<String> nameParts = [];
     if (firstName.isNotEmpty) {
@@ -50,7 +52,8 @@ class Caller {
             .where((number) => number.isNotEmpty && number.toLowerCase() != 'na')
             .toList(),
         name: fullName,
-        searchName: map['searchName']
+        searchName: map['searchName'],
+        employeeName: map['employeeName'] as String? ?? '',
     );
   }
 
@@ -58,8 +61,9 @@ class Caller {
   factory Caller.fromMapLocalDb(Map<dynamic, dynamic> map) {
     return Caller(
         phoneNumbers: map['phoneNumbers'].split(','),
-        name: map['name'] as String? ?? 'Unknown', // Handle missing name gracefully
-        searchName: map['searchName']
+        name: map['name'] as String? ?? 'Unknown',
+        searchName: map['searchName'] as String? ?? '',
+        employeeName: map['employeeName'] as String? ?? '',
     );
   }
 
@@ -70,6 +74,7 @@ class Caller {
       'Phone 3 - Value': (phoneNumbers != null && phoneNumbers.length > 2) ? phoneNumbers[2] : '',
       'First Name': name,
       'searchName': searchName,
+      'employeeName': employeeName
     };
   }
 
@@ -78,6 +83,7 @@ class Caller {
       'phoneNumbers': phoneNumbers.join(','),
       'name': name,
       'searchName': searchName,
+      'employeeName': employeeName
     };
   }
 }
