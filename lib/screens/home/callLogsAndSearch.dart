@@ -3,17 +3,18 @@ import 'package:call_log/call_log.dart';
 import 'package:phone_collar/utils/phone_number_formatter.dart';
 import 'package:phone_collar/utils/search_name_formatter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_contacts/flutter_contacts.dart'; // <-- Replace old import here
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'dart:async';
+
 import '../../../services/firebase_service.dart';
 import '../../../services/call_log_service.dart';
+import '../../../services/local_db_service.dart';
 import '../../models/caller.dart';
 import '../../services/notification_service.dart';
-import 'widgets/call_log_tile.dart';
 import '../../call_event_channel.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import '../../../services/local_db_service.dart';
-import 'package:contacts_service/contacts_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:async';
+import 'widgets/call_log_tile.dart';
 
 enum SearchType { name, number }
 
@@ -30,6 +31,7 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
   final CallLogService _callLogService = CallLogService();
   final FirebaseService _firebaseService = FirebaseService();
   final TextEditingController _searchController = TextEditingController();
+
   List<CallLogEntry> _callLogs = [];
   List<CallLogEntry> _filteredCallLogs = [];
   List<Caller> _searchResults = [];
@@ -37,6 +39,7 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
   bool _isLoadingCallLogs = true;
   bool _isLoadingFirebase = true;
   bool _isSyncingContacts = false; // Flag for contact syncing state
+
   late FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
 
   @override
@@ -51,7 +54,6 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
 
   Future<void> checkAndSyncContacts() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-
     int? lastSyncTime = prefs.getInt('lastSyncTime');
     int currentTime = DateTime.now().millisecondsSinceEpoch;
     const int thresholdForResyncInMilliSeconds = 48 * 60 * 60 * 1000;
@@ -87,6 +89,9 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
     }
   }
 
+  /// -------------------------------
+  /// SYNC CONTACTS USING flutter_contacts
+  /// -------------------------------
   Future<void> syncContacts() async {
     if (_isSyncingContacts) return; // Prevent multiple syncs
 
@@ -102,7 +107,7 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 CircularProgressIndicator(
-                  color: Theme.of(context).colorScheme.primary, // Orange color
+                  color: Theme.of(context).colorScheme.primary,
                 ),
                 const SizedBox(height: 20),
                 const Text('Syncing contacts...'),
@@ -119,31 +124,54 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
     setState(() {
       _isSyncingContacts = true;
     });
+
     await _initializeFirebase();
 
     try {
+      // Clear local DB first
       widget.localDbService.clearLocalDb();
 
-      Iterable<Contact> contactsLocal =
-      await ContactsService.getContacts(withThumbnails: false);
-      List<Caller> callersLocal = [];
+      // Request permission for reading contacts
+      bool hasPermission = await FlutterContacts.requestPermission();
+      if (!hasPermission) {
+        throw Exception('Permission denied for reading contacts');
+      }
+
+      // Retrieve contacts with phone numbers
+      List<Contact> contactsLocal =
+      await FlutterContacts.getContacts(withProperties: true);
+
+      List<Caller> callers = [];
 
       for (Contact contact in contactsLocal) {
-        var searchName = formatSearchName(contact.displayName ?? '');
+        // flutter_contacts provides a .displayName convenience getter
+        final displayName = contact.displayName.isEmpty
+            ? 'Unknown'
+            : contact.displayName;
+
+        // Extract phone numbers from flutter_contacts
+        final phoneNumbers =
+        contact.phones.map((phone) => formatPhoneNumber(phone.number)).where((p) => p.trim().isNotEmpty).toList();
+
+        var searchName = formatSearchName(displayName);
+
         var callerLocal = Caller(
-            name: contact.displayName ?? 'Unknown',
-            phoneNumbers: contact.phones?.map((item) => item.value ?? '').toList() ?? [],
-            searchName: searchName,
-            employeeName: 'PhoneContact'
+          name: displayName,
+          phoneNumbers: phoneNumbers,
+          searchName: searchName,
+          employeeName: 'PhoneContact',
         );
-        callersLocal.add(callerLocal);
+        callers.add(callerLocal);
       }
-      await widget.localDbService.saveContacts(callersLocal);
 
+      // Save local device contacts to local DB
+      //await widget.localDbService.saveContacts(callersLocal);
+
+      // Also fetch any server contacts from Firebase
       final contacts = await _firebaseService.getAllContacts();
-
+      callers.addAll(contacts);
+      // Add them into local DB as well
       await widget.localDbService.saveContacts(contacts);
-
 
       // Close the loading dialog
       if (mounted) {
@@ -154,8 +182,7 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content:
-            Text('Successfully synced ${contacts.length} contacts'),
+            content: Text('Successfully synced ${contacts.length} contacts'),
             backgroundColor: Colors.green,
           ),
         );
@@ -188,12 +215,10 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
   void _setupCallEventListener() {
     CallEventChannel.incomingCallStream.listen((number) async {
       if (!mounted) return;
-
       try {
         // First check local database for faster lookup
         final localContact =
         await widget.localDbService.getContactByNumber(number);
-
         if (localContact != null) {
           NotificationService.showIncomingCallNotification(localContact.name);
           return;
@@ -201,12 +226,12 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
       } catch (e) {
         print('Error in call event listener: $e');
         if (mounted) {
-          NotificationService.showIncomingCallNotification(number ?? 'Unknown');
+          NotificationService.showIncomingCallNotification(
+              number ?? 'Unknown');
         }
       }
     });
   }
-
 
   Future<void> _initializeNotifications() async {
     flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
@@ -437,8 +462,7 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
                       Navigator.of(context).pop();
 
                       // Use the parent context to show the Snackbar.
-                      ScaffoldMessenger.of(parentContext)
-                          .showSnackBar(
+                      ScaffoldMessenger.of(parentContext).showSnackBar(
                         const SnackBar(
                           content: Text('Contact added successfully'),
                           backgroundColor: Colors.green,
@@ -446,8 +470,7 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
                       );
                     } catch (e) {
                       print('Error adding contact: $e');
-                      ScaffoldMessenger.of(parentContext)
-                          .showSnackBar(
+                      ScaffoldMessenger.of(parentContext).showSnackBar(
                         SnackBar(
                           content: Text(
                               'Failed to add contact: ${e.toString()}'),
@@ -474,14 +497,13 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Call Logs'),
         backgroundColor: Theme.of(context).colorScheme.primary, // Orange background
-        foregroundColor: Theme.of(context).colorScheme.onPrimary, // Black text
+        foregroundColor: Theme.of(context).colorScheme.onPrimary, // Text color
         actions: [
           _isSyncingContacts
               ? Padding(
@@ -492,16 +514,19 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
                 height: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: Theme.of(context).colorScheme.onPrimary, // Black color
+                  color:
+                  Theme.of(context).colorScheme.onPrimary, // Black color
                 ),
               ),
             ),
           )
               : TextButton.icon(
-            icon: Icon(Icons.sync, color: Theme.of(context).colorScheme.onPrimary),
+            icon: Icon(Icons.sync,
+                color: Theme.of(context).colorScheme.onPrimary),
             label: Text(
               'Sync Contacts',
-              style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onPrimary),
             ),
             onPressed: syncContacts,
           ),
@@ -514,10 +539,12 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Enter name or number to search',
-                prefixIcon: Icon(Icons.search, color: Theme.of(context).colorScheme.primary),
+                prefixIcon: Icon(Icons.search,
+                    color: Theme.of(context).colorScheme.primary),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
-                  icon: Icon(Icons.clear, color: Theme.of(context).colorScheme.primary),
+                  icon: Icon(Icons.clear,
+                      color: Theme.of(context).colorScheme.primary),
                   onPressed: () {
                     _searchController.clear();
                     setState(() {
@@ -530,11 +557,13 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
                     : null,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
+                  borderSide:
+                  BorderSide(color: Theme.of(context).colorScheme.primary),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
+                  borderSide: BorderSide(
+                      color: Theme.of(context).colorScheme.primary, width: 2),
                 ),
                 filled: true,
                 fillColor: Colors.white,
@@ -561,17 +590,16 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
   void _makePhoneCall(List<String> numbers) async {
     if (numbers.isEmpty) return;
     if (numbers.length == 1) {
-      final Uri launchUri = Uri(
-        scheme: 'tel',
-        path: numbers.first,
-      );
+      final Uri launchUri = Uri(scheme: 'tel', path: numbers.first);
       await launchUrl(launchUri);
     } else {
       final selectedNumber = await showDialog<String>(
         context: context,
         builder: (context) {
           return AlertDialog(
-            title: Text('Select Number to Call', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+            title: Text('Select Number to Call',
+                style:
+                TextStyle(color: Theme.of(context).colorScheme.primary)),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: numbers.map((number) {
@@ -585,10 +613,7 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
         },
       );
       if (selectedNumber != null) {
-        final Uri launchUri = Uri(
-          scheme: 'tel',
-          path: selectedNumber,
-        );
+        final Uri launchUri = Uri(scheme: 'tel', path: selectedNumber);
         await launchUrl(launchUri);
       }
     }
@@ -597,17 +622,16 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
   void _sendMessage(List<String> numbers) async {
     if (numbers.isEmpty) return;
     if (numbers.length == 1) {
-      final Uri launchUri = Uri(
-        scheme: 'sms',
-        path: numbers.first,
-      );
+      final Uri launchUri = Uri(scheme: 'sms', path: numbers.first);
       await launchUrl(launchUri);
     } else {
       final selectedNumber = await showDialog<String>(
         context: context,
         builder: (context) {
           return AlertDialog(
-            title: Text('Select Number to Message', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+            title: Text('Select Number to Message',
+                style:
+                TextStyle(color: Theme.of(context).colorScheme.primary)),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: numbers.map((number) {
@@ -621,10 +645,7 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
         },
       );
       if (selectedNumber != null) {
-        final Uri launchUri = Uri(
-          scheme: 'sms',
-          path: selectedNumber,
-        );
+        final Uri launchUri = Uri(scheme: 'sms', path: selectedNumber);
         await launchUrl(launchUri);
       }
     }
@@ -656,8 +677,8 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
                     icon: const Icon(Icons.call),
                     label: const Text('Call'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary, // Orange
-                      foregroundColor: Theme.of(context).colorScheme.onPrimary, // Black
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -666,8 +687,8 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
                     icon: const Icon(Icons.message),
                     label: const Text('Message'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary, // Orange
-                      foregroundColor: Theme.of(context).colorScheme.onPrimary, // Black
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     ),
                   ),
                 ],
@@ -679,8 +700,8 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
                 icon: const Icon(Icons.person_add),
                 label: const Text('Add Contact'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary, // Orange
-                  foregroundColor: Theme.of(context).colorScheme.onPrimary, // Black
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 ),
               ),
             ],
@@ -714,11 +735,13 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
-                    icon: Icon(Icons.call, color: Theme.of(context).colorScheme.primary),
+                    icon: Icon(Icons.call,
+                        color: Theme.of(context).colorScheme.primary),
                     onPressed: () => _makePhoneCall(numbers),
                   ),
                   IconButton(
-                    icon: Icon(Icons.message, color: Theme.of(context).colorScheme.primary),
+                    icon: Icon(Icons.message,
+                        color: Theme.of(context).colorScheme.primary),
                     onPressed: () => _sendMessage(numbers),
                   ),
                 ],
@@ -736,7 +759,7 @@ class _CallLogsScreenState extends State<CallLogsScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             CircularProgressIndicator(
-              color: Theme.of(context).colorScheme.primary, // Orange color
+              color: Theme.of(context).colorScheme.primary,
             ),
             const SizedBox(height: 16),
             const Text('Loading call logs...'),

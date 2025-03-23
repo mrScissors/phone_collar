@@ -21,8 +21,25 @@ class CallLogApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Call Log App',
-      theme: ThemeData(primarySwatch: Colors.orange),
       home: HomeScreen(localDbService: localDbService),
+      theme: ThemeData(
+        primarySwatch: Colors.orange,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.orange,
+          primary: Colors.orange,
+          onPrimary: Colors.black,
+        ),
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: Colors.orange,
+          foregroundColor: Colors.black,
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            foregroundColor: Colors.black, backgroundColor: Colors.orange,
+          ),
+        ),
+        useMaterial3: true,
+      ),
     );
   }
 }

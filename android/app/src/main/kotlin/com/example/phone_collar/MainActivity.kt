@@ -1,10 +1,12 @@
 package com.example.phone_collar
 
-import android.telephony.PhoneStateListener
-import android.telephony.TelephonyManager
+import android.os.Bundle
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
+import android.content.Intent
+import android.telephony.PhoneStateListener
+import android.telephony.TelephonyManager
 
 class MainActivity : FlutterActivity() {
 
@@ -13,6 +15,7 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
+        // Existing EventChannel code (for streams inside your running Flutter app):
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, eventChannelName)
             .setStreamHandler(object : EventChannel.StreamHandler {
                 var phoneStateListener: PhoneStateListener? = null
@@ -37,4 +40,5 @@ class MainActivity : FlutterActivity() {
                 }
             })
     }
+
 }
