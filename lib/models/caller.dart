@@ -14,10 +14,20 @@ class Caller {
   });
 
   factory Caller.fromMapRemoteDb(Map<dynamic, dynamic> map) {
+    // Safely retrieve and trim the first name.
     String firstName = (map['First Name'] as String?)?.trim() ?? '';
-    String middleName = map['Middle Name'] != "None"?map['Middle Name'].trim() : '';
-    String lastName = map['Last Name'] != "None"?map['Last Name'].trim() : '';
 
+    // Safely retrieve and trim the middle name.
+    String? rawMiddleName = map['Middle Name'] as String?;
+    rawMiddleName = rawMiddleName?.trim();
+    String middleName = (rawMiddleName != null && rawMiddleName != "None") ? rawMiddleName : '';
+
+    // Safely retrieve and trim the last name.
+    String? rawLastName = map['Last Name'] as String?;
+    rawLastName = rawLastName?.trim();
+    String lastName = (rawLastName != null && rawLastName != "None") ? rawLastName : '';
+
+    // Create a full name by joining all non-empty name parts.
     List<String> nameParts = [];
     if (firstName.isNotEmpty) {
       nameParts.add(firstName);
@@ -30,22 +40,25 @@ class Caller {
     }
     String fullName = nameParts.isNotEmpty ? nameParts.join(' ') : 'Unknown';
 
-
+    // Process phone numbers safely by checking null, trimming, and validating against unwanted characters.
     List<String> phoneNumbersMapped = [];
 
-    if (map['Phone 1 - Value'] != null && !containsAlphabet(map['Phone 1 - Value'])) {
-      phoneNumbersMapped.add(map['Phone 1 - Value'].toString());
-    }
-    if (map['Phone 2 - Value'] != null && !containsAlphabet(map['Phone 2 - Value'])) {
-      //phoneNumbersMapped += phoneNumbersMapped.isNotEmpty ? ', ' : '';
-      phoneNumbersMapped.add(map['Phone 2 - Value'].toString());
-    }
-    if (map['Phone 3 - Value'] != null && !containsAlphabet(map['Phone 3 - Value'])) {
-      //phoneNumbersMapped += phoneNumbersMapped.isNotEmpty ? ', ' : '';
-      phoneNumbersMapped.add(map['Phone 3 - Value'].toString());
+    String? phone1 = map['Phone 1 - Value'] as String?;
+    if (phone1 != null && !containsAlphabet(phone1)) {
+      phoneNumbersMapped.add(phone1.trim());
     }
 
-    return Caller(
+    String? phone2 = map['Phone 2 - Value'] as String?;
+    if (phone2 != null && !containsAlphabet(phone2)) {
+      phoneNumbersMapped.add(phone2.trim());
+    }
+
+    String? phone3 = map['Phone 3 - Value'] as String?;
+    if (phone3 != null && !containsAlphabet(phone3)) {
+      phoneNumbersMapped.add(phone3.trim());
+    }
+
+  return Caller(
         phoneNumbers: phoneNumbersMapped
             .whereType<String>()
             .map((number) => number.trim())

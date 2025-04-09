@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:phone_collar/auth/auth_service.dart';
 import 'package:phone_collar/services/local_db_service.dart';
 import 'callLogsAndSearch.dart';
 
 class HomeScreen extends StatefulWidget {
   final LocalDbService localDbService;
-  const HomeScreen({Key? key, required this.localDbService}) : super(key: key);
+  final AuthService authService;
+  const HomeScreen({Key? key, required this.localDbService, required this.authService}) : super(key: key);
 
   @override
   _HomeScreenState createState() => _HomeScreenState();
@@ -15,7 +17,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    requestNotificationPermission();
+    // Schedule notification permission request after the first frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      requestNotificationPermission();
+    });
     requestContactsPermission();
   }
 
@@ -23,7 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     // Only the CallLogsScreen is used now.
     return Scaffold(
-      body: CallLogsScreen(localDbService: widget.localDbService),
+      body: CallLogsScreen(localDbService: widget.localDbService, authService: widget.authService,),
     );
   }
 

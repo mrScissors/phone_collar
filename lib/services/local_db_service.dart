@@ -33,9 +33,19 @@ class LocalDbService {
     );
   }
 
-  void clearLocalDb() {
-    final batch = _database!.batch();
-    batch.delete(_tableName);
+  Future<void> clearLocalDb() async {
+    // Drop the table if it exists
+    await _database?.execute("DROP TABLE IF EXISTS $_tableName");
+
+    // Recreate the table with the desired schema
+    await _database?.execute('''
+    CREATE TABLE $_tableName(
+      name TEXT,
+      phoneNumbers TEXT,
+      searchName TEXT,
+      employeeName TEXT
+    )
+  ''');
   }
 
   Future<void> saveContacts(List<Caller> contacts) async {
@@ -173,7 +183,7 @@ class LocalDbService {
   /// ------------------------------------------
   Future<List<Caller>> searchContactsByNumber(String query) async {
     if (_database == null) return [];
-
+    if (containsAlphabet(query)) return [];
     // 1) First, check local DB
     final formattedQuery = formatPhoneNumber(query);
     final results = await _database!.query(

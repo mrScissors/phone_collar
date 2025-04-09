@@ -1,44 +1,56 @@
 package com.example.phone_collar
 
-import android.os.Bundle
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
-import io.flutter.plugin.common.EventChannel
-import android.content.Intent
-import android.telephony.PhoneStateListener
-import android.telephony.TelephonyManager
+import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
-
-    private val eventChannelName = "com.example.phone_collar/incomingCallStream"
+    private val CHANNEL = "com.example.callhandling/methods"
+    private lateinit var methodChannel: MethodChannel
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
-        // Existing EventChannel code (for streams inside your running Flutter app):
-        EventChannel(flutterEngine.dartExecutor.binaryMessenger, eventChannelName)
-            .setStreamHandler(object : EventChannel.StreamHandler {
-                var phoneStateListener: PhoneStateListener? = null
+        // Setup method channel
+        val channel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "caller_id_channel")
 
-                override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
-                    val telephonyManager = getSystemService(TELEPHONY_SERVICE) as TelephonyManager
-                    phoneStateListener = object : PhoneStateListener() {
-                        override fun onCallStateChanged(state: Int, phoneNumber: String?) {
-                            if (state == TelephonyManager.CALL_STATE_RINGING && phoneNumber != null) {
-                                events?.success(phoneNumber)
+        // Set method channel in CallHandlingService
+        CallService.setMethodChannel(channel)
+
+        // Setup method call handler
+        channel.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "lookupCallerInfo" -> {
+                    val phoneNumber = call.arguments as? String
+                    if (phoneNumber != null) {
+                        // Directly pass the result to the method channel
+                        channel.invokeMethod(
+                            "lookupCallerInfo",
+                            phoneNumber,
+                            object : MethodChannel.Result {
+                                override fun success(callerInfo: Any?) {
+                                    // Successfully retrieved caller info
+                                    // Pass the result back to the original caller
+                                    result.success(callerInfo)
+                                }
+
+                                override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) {
+                                    // Handle error case
+                                    result.error(errorCode, errorMessage, errorDetails)
+                                }
+
+                                override fun notImplemented() {
+                                    // Handle not implemented case
+                                    result.notImplemented()
+                                }
                             }
-                        }
-                    }
-                    telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_CALL_STATE)
-                }
-
-                override fun onCancel(arguments: Any?) {
-                    val telephonyManager = getSystemService(TELEPHONY_SERVICE) as TelephonyManager
-                    phoneStateListener?.let {
-                        telephonyManager.listen(it, PhoneStateListener.LISTEN_NONE)
+                        )
+                    } else {
+                        result.error("INVALID_ARGUMENT", "Phone number is required", null)
                     }
                 }
-            })
+                else -> result.notImplemented()
+            }
+        }
     }
-
 }

@@ -1,27 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:phone_collar/auth/auth_service.dart';
 import 'screens/home/home.dart';
 import 'services/local_db_service.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  // Initialize the local DB service.
-  final localDbService = LocalDbService();
-  await localDbService.initialize();
-
-  runApp(CallLogApp(localDbService: localDbService));
-}
-
 class CallLogApp extends StatelessWidget {
   final LocalDbService localDbService;
-
-  const CallLogApp({Key? key, required this.localDbService}) : super(key: key);
+  final AuthService authService;
+  const CallLogApp({Key? key, required this.localDbService, required this.authService}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Call Log App',
-      home: HomeScreen(localDbService: localDbService),
+      home: HomeScreen(localDbService: localDbService, authService: authService),
       theme: ThemeData(
         primarySwatch: Colors.orange,
         colorScheme: ColorScheme.fromSeed(

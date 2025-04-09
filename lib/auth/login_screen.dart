@@ -49,7 +49,7 @@ class _LoginScreenState extends State<LoginScreen> {
       // Navigate to main app directly from here
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (context) => CallLogApp(localDbService: widget.localDbService),
+          builder: (context) => CallLogApp(localDbService: widget.localDbService, authService: widget.authService,),
         ),
       );
 

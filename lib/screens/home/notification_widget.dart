@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import '../../call_event_channel.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -17,10 +16,6 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _initializeNotifications();
 
-    // Listen for incoming call events.
-    CallEventChannel.incomingCallStream.listen((number) {
-      _showNotification(number);
-    });
   }
 
   Future<void> _initializeNotifications() async {

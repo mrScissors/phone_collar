@@ -8,12 +8,24 @@ import 'package:flutter_contacts/flutter_contacts.dart';
 
 class FirebaseService {
   final DatabaseReference _database = FirebaseDatabase.instance.ref('callers');
-  bool _isInitialized = false;
   List<Caller> _callersCache = [];
 
-  Future<void> initializeWithCallersData() async {
-    final snapshot = await readData('callers');
-    // do whatever else you need to do on initialization
+  Future<bool> initializeWithCallersData() async {
+    try {
+      final snapshot = await readData('callers');
+      return true;
+      // Continue processing the snapshot if necessary.
+    } catch (e) {
+      // Check if the error message indicates a permission issue.
+      if (e.toString().contains("PERMISSION_DENIED") ||
+          e.toString().toLowerCase().contains("permission")) {
+        return false;
+      } else {
+        // Handle other errors accordingly.
+        throw Exception('Error initializing callers data: $e');
+        return false;
+      }
+    }
   }
 
   Future<void> createData(String path, Map<String, dynamic> data) async {
@@ -192,14 +204,18 @@ class FirebaseService {
     }
   }
 
-  Future<List<Caller>> getAllContacts() async {
-    if (!_isInitialized) await initializeWithCallersData();
+  Future<(bool, List<Caller>)> getAllContacts() async {
+    bool isPermissionGranted = await initializeWithCallersData();
+    if (!isPermissionGranted) {
+      return (false, List<Caller>.from(_callersCache));
+    }
     final snapshot = await _database.get();
     if (snapshot.exists) {
       _callersCache = _parseCallers(snapshot);
     }
-    return List.from(_callersCache);
+    return (true, List<Caller>.from(_callersCache));
   }
+
 
   List<Caller> _parseCallers(DataSnapshot snapshot) {
     final callers = <Caller>[];

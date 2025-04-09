@@ -23,14 +23,19 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _checkLoginStatus();
+    _initializeAuth();
   }
 
-  Future<void> _checkLoginStatus() async {
-    await Future.delayed(const Duration(seconds: 1));
+  Future<void> _initializeAuth() async {
+    // Wait for the auth service initialization to complete.
+    await widget.authService.initialize();
 
     if (!mounted) return;
 
+    _checkLoginStatus();
+  }
+
+  void _checkLoginStatus() {
     // Check if user is already logged in
     final currentUser = widget.authService.currentUser;
 
@@ -38,11 +43,14 @@ class _SplashScreenState extends State<SplashScreen> {
       // User is logged in, navigate to main app
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (context) => CallLogApp(localDbService: widget.localDbService),
+          builder: (context) => CallLogApp(
+            localDbService: widget.localDbService,
+            authService: widget.authService,
+          ),
         ),
       );
     } else {
-      // User is not logged in, navigate to login screen
+      // User is not logged in, navigate to the login screen
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (context) => LoginScreen(
