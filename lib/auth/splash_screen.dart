@@ -36,6 +36,15 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   void _checkLoginStatus() {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => CallLogApp(
+          localDbService: widget.localDbService,
+          authService: widget.authService,
+        ),
+      ),
+    );
+    /*
     // Check if user is already logged in
     final currentUser = widget.authService.currentUser;
 
@@ -60,6 +69,8 @@ class _SplashScreenState extends State<SplashScreen> {
         ),
       );
     }
+
+     */
   }
 
   @override

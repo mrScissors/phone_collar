@@ -1,9 +1,10 @@
 import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import '../models/caller.dart';
+import '../screens/home/widgets/progress_dialog.dart';
 import '../utils/phone_number_formatter.dart';
 import '../utils/search_name_formatter.dart';
-// Remove: import 'package:contacts_service/contacts_service.dart';
-// Remove: import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 
 class FirebaseService {
@@ -204,17 +205,102 @@ class FirebaseService {
     }
   }
 
-  Future<(bool, List<Caller>)> getAllContacts() async {
+  Future<(bool, List<Caller>)> getAllContacts({
+    required BuildContext context,
+    int pageSize = 1000,
+  }) async {
     bool isPermissionGranted = await initializeWithCallersData();
     if (!isPermissionGranted) {
       return (false, List<Caller>.from(_callersCache));
     }
-    final snapshot = await _database.get();
-    if (snapshot.exists) {
-      _callersCache = _parseCallers(snapshot);
-    }
+
+    _callersCache.clear();
+
+    final progressNotifier = ValueNotifier<double>(0.0);
+
+    // Show progress dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => ProgressDialog(progressNotifier: progressNotifier),
+    );
+
+    await _downloadAllContactsPaginated(pageSize, progressNotifier);
+
+    // Close the dialog
+    Navigator.of(context, rootNavigator: true).pop();
+
     return (true, List<Caller>.from(_callersCache));
   }
+
+
+  Future<void> _downloadAllContactsPaginated(
+      int pageSize,
+      ValueNotifier<double> progressNotifier,
+      ) async {
+    String? nextPageKey;
+    bool hasMoreData = true;
+    int totalFetched = 0;
+
+    // 🔁 Dynamically get the total number of entries from the database
+    final totalSnapshot = await _database.get();
+    final estimatedTotal = totalSnapshot.children.length;
+
+    while (hasMoreData) {
+      try {
+        Query query;
+        if (nextPageKey == null) {
+          query = _database.limitToFirst(pageSize);
+        } else {
+          query = _database.orderByKey().startAt(nextPageKey).limitToFirst(pageSize + 1);
+        }
+
+        final snapshot = await query.get();
+
+        if (!snapshot.exists || snapshot.children.isEmpty) {
+          hasMoreData = false;
+          continue;
+        }
+
+        List<DataSnapshot> dataList = snapshot.children.toList();
+
+        if (nextPageKey != null && dataList.isNotEmpty) {
+          dataList.removeAt(0);
+        }
+
+        if (dataList.length < pageSize) {
+          hasMoreData = false;
+        }
+
+        if (dataList.isNotEmpty) {
+          nextPageKey = dataList.last.key;
+
+          for (var doc in dataList) {
+            if (doc.value is Map) {
+              final data = Map<String, dynamic>.from(doc.value as Map);
+              final caller = Caller.fromMapRemoteDb(data);
+              _callersCache.add(caller);
+              totalFetched++;
+            }
+          }
+
+          // 📈 Update progress using the actual total
+          double progress = estimatedTotal == 0
+              ? 1.0
+              : (totalFetched / estimatedTotal).clamp(0.0, 1.0);
+          progressNotifier.value = progress;
+        } else {
+          hasMoreData = false;
+        }
+      } catch (e) {
+        print('Error during pagination: $e');
+        hasMoreData = false;
+      }
+    }
+
+    progressNotifier.value = 1.0;
+  }
+
 
 
   List<Caller> _parseCallers(DataSnapshot snapshot) {
@@ -250,4 +336,6 @@ class FirebaseService {
 
     return callers;
   }
+
+
 }

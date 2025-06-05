@@ -3,7 +3,7 @@ import 'package:path/path.dart';
 import '../models/caller.dart';
 import '../utils/phone_number_formatter.dart';
 import '../utils/search_name_formatter.dart';
-import 'package:flutter_contacts/flutter_contacts.dart'; // <-- Use flutter_contacts here
+import 'package:flutter_contacts/flutter_contacts.dart';
 
 class LocalDbService {
   static Database? _database;
@@ -88,7 +88,7 @@ class LocalDbService {
           return Caller.fromMapLocalDb(results.first);
         }
       }
-
+/*
       // 2) If not found, attempt to get from device contacts
       //    using flutter_contacts, by searching all phone numbers
       final permissionGranted = await FlutterContacts.requestPermission();
@@ -114,7 +114,7 @@ class LocalDbService {
           }
         }
       }
-
+*/
       // Not found in local DB or in device contacts
       return null;
     } catch (e) {
@@ -142,13 +142,14 @@ class LocalDbService {
 
     // 2) If not found, search device contacts with flutter_contacts
     final localSearchResult = <Caller>[];
-
+  /*
     try {
       final permissionGranted = await FlutterContacts.requestPermission();
       if (!permissionGranted) {
         print('User denied contact permission');
         return [];
       }
+
 
       // flutter_contacts: we can do name-based searching by passing `query`
       final deviceContacts = await FlutterContacts.getContacts(withProperties: true);
@@ -170,12 +171,14 @@ class LocalDbService {
         );
         localSearchResult.add(localCaller);
       }
-
       return localSearchResult;
     } catch (e) {
       print('Error with name lookup using flutter_contacts: $e');
       return [];
     }
+    */
+
+  return localSearchResult;
   }
 
   /// ------------------------------------------
@@ -197,6 +200,7 @@ class LocalDbService {
 
     // 2) If not found in local DB, fetch from device contacts
     final localSearchResult = <Caller>[];
+    /*
     try {
       final permissionGranted = await FlutterContacts.requestPermission();
       if (!permissionGranted) {
@@ -229,6 +233,8 @@ class LocalDbService {
       print('Error with direct phone lookup using flutter_contacts: $e');
       return [];
     }
+*/
+    return localSearchResult;
   }
 
   Future<List<Caller>> getAllContacts() async {

@@ -9,7 +9,7 @@ import 'services/notification_service.dart';
 import 'services/local_db_service.dart';
 import 'auth/auth_service.dart';
 import 'auth/splash_screen.dart';
-import 'package:flutter/services.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 
 const MethodChannel _channel = MethodChannel('caller_id_channel');
@@ -22,6 +22,14 @@ Future<void> main() async {
 
   // Initialize Firebase and notifications
   await Firebase.initializeApp();
+  /*
+  FirebaseDatabase database = FirebaseDatabase.instance;
+  database.setPersistenceEnabled(true);
+  // (optional) bump cache if you want more than the default 10 MB
+  database.setPersistenceCacheSizeBytes(100 * 1024 * 1024);
+
+   */
+
   await NotificationService.initialize();
   final notificationService = NotificationService();
   await notificationService.setupNotifications();

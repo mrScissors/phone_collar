@@ -114,61 +114,48 @@ class _CallLogsScreenState extends State<CallLogsScreen> with WidgetsBindingObse
   Future<void> syncContacts() async {
     if (_isSyncingContacts) return; // Prevent multiple syncs
 
-    // Show loading dialog when starting sync
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (BuildContext context) {
-        return Dialog(
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(height: 20),
-                const Text('Syncing contacts...'),
-                const SizedBox(height: 10),
-                Text('Please wait while your contacts are being loaded',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-
     setState(() {
       _isSyncingContacts = true;
     });
 
-    bool isMounted = await _initializeFirebase();
-
     try {
-      // Clear local DB first
-      await widget.localDbService.clearLocalDb();
+      bool isMounted = await _initializeFirebase();
 
       // Request permission for reading contacts
-      bool hasPermission = await FlutterContacts.requestPermission();
+      bool hasPermission = await FlutterContacts.requestPermission(readonly: false);
+/*
       if (!hasPermission) {
-        throw Exception('Permission denied for reading contacts');
-      }
+        if (context.mounted) {
+          await showDialog(
+            context: context,
+            builder: (_) => AlertDialog(
+              title: const Text("Permission Denied"),
+              content: const Text("We need contact permission to sync your contacts."),
+            ),
+          );
+        }
 
+        return; // Exit sync
+      }
+*/
+      print ("reached herereerererererererererererereerrrrrrrrrrrrrrrrrreeeeeeeeeeeeeeeeeeeeeeee");
+      // Clear local DB first
+      await widget.localDbService.clearLocalDb();
+      List<Contact> contactsLocal = [];
+      /*
       // Retrieve contacts with phone numbers
       List<Contact> contactsLocal =
       await FlutterContacts.getContacts(withProperties: true);
 
+       */
+
       List<Caller> callers = [];
 
       for (Contact contact in contactsLocal) {
-        // Use .displayName convenience getter, defaulting to 'Unknown'
         final displayName = contact.displayName.isEmpty
             ? 'Unknown'
             : contact.displayName;
 
-        // Extract and format phone numbers
         final phoneNumbers = contact.phones
             .map((phone) => formatPhoneNumber(phone.number))
             .where((p) => p.trim().isNotEmpty)
@@ -186,52 +173,15 @@ class _CallLogsScreenState extends State<CallLogsScreen> with WidgetsBindingObse
       }
 
       // Fetch any server contacts from Firebase and add them in
-      bool isPermissionGranted = true;
-      List<Caller> contacts = [];
-      (isPermissionGranted, contacts) = await _firebaseService.getAllContacts();
-
-      if (!isPermissionGranted) {
-        // Show a toast message indicating the issue with the session.
-        Fluttertoast.showToast(
-          msg: "There was an issue with current session, login again",
-          toastLength: Toast.LENGTH_LONG,
-          gravity: ToastGravity.BOTTOM,
-        );
-
-        // Close the loading dialog if it's still open.
-        if (mounted) {
-          Navigator.of(context, rootNavigator: true).pop();
-        }
-
-        // Log out the user from Firebase.
-        await widget.authService.signOut();
-
-        // Navigate back to the login screen, removing all previous routes.
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (context) => LoginScreen(
-              authService: widget.authService,
-              localDbService: widget.localDbService,
-            ),
-          ),
-              (Route<dynamic> route) => false,
-        );
-
-        return;
-      }
+      final (success, contacts) =
+      await _firebaseService.getAllContacts(context: context);
 
       callers.addAll(contacts);
 
       // Save all contacts to the local database
       await widget.localDbService.saveContacts(callers);
 
-      // Close the loading dialog
-      if (mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
-      }
-
-      // Show success message
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Successfully synced ${contacts.length} contacts'),
@@ -239,14 +189,9 @@ class _CallLogsScreenState extends State<CallLogsScreen> with WidgetsBindingObse
           ),
         );
       }
-    } catch (e) {
-      // Close the loading dialog even if there's an error
-      if (mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
-      }
 
-      // Show error message
-      if (mounted) {
+    } catch (e) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to sync contacts: ${e.toString()}'),
