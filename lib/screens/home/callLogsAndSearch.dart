@@ -138,7 +138,6 @@ class _CallLogsScreenState extends State<CallLogsScreen> with WidgetsBindingObse
         return; // Exit sync
       }
 */
-      print ("reached herereerererererererererererereerrrrrrrrrrrrrrrrrreeeeeeeeeeeeeeeeeeeeeeee");
       // Clear local DB first
       await widget.localDbService.clearLocalDb();
       List<Contact> contactsLocal = [];
@@ -386,7 +385,7 @@ class _CallLogsScreenState extends State<CallLogsScreen> with WidgetsBindingObse
 
                     final name = nameController.text.trim();
                     final employeeName = employeeNameController.text.trim();
-                    final phone1 = phoneNumber1Controller.text.trim();
+                    final phone1 = formatPhoneNumber(phoneNumber1Controller.text.trim());
 
                     if (name.isEmpty || phone1.isEmpty) {
                       ScaffoldMessenger.of(parentContext).showSnackBar(
@@ -406,10 +405,10 @@ class _CallLogsScreenState extends State<CallLogsScreen> with WidgetsBindingObse
                       List<String> phoneNumbers = [];
                       if (phone1.isNotEmpty) phoneNumbers.add(phone1);
 
-                      final phone2 = phoneNumber2Controller.text.trim();
+                      final phone2 = formatPhoneNumber(phoneNumber2Controller.text.trim());
                       if (phone2.isNotEmpty) phoneNumbers.add(phone2);
 
-                      final phone3 = phoneNumber3Controller.text.trim();
+                      final phone3 = formatPhoneNumber(phoneNumber3Controller.text.trim());
                       if (phone3.isNotEmpty) phoneNumbers.add(phone3);
 
                       final searchName = formatSearchName(name);

@@ -17,6 +17,7 @@ import android.telephony.TelephonyManager
 import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
@@ -25,6 +26,7 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import io.flutter.plugin.common.MethodChannel
+import kotlin.math.abs
 
 class CallService : Service() {
     companion object {
@@ -111,6 +113,7 @@ class CallService : Service() {
         val nameText: TextView? = overlayView.findViewById(R.id.txtCallerName)
         val answerBtn: Button? = overlayView.findViewById(R.id.btnAnswer)
         val rejectBtn: Button? = overlayView.findViewById(R.id.btnReject)
+        val dismissBtn: Button? = overlayView.findViewById(R.id.btnDismiss)
 
         numberText?.text = phoneNumber
         nameText?.text = "Identifying..."  // will update with caller ID name from Flutter
@@ -128,6 +131,15 @@ class CallService : Service() {
             endCall()
             removeAllOverlays()
         }
+
+        // Set up Dismiss button click (hides overlay but keeps call ringing)
+        dismissBtn?.setOnClickListener {
+            Log.d(TAG, "Dismiss button clicked")
+            dismissOverlay()
+        }
+
+        // Add swipe-to-dismiss functionality
+        setupSwipeToDismiss(overlayView)
 
         // Overlay layout parameters for the window
         val overlayType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
@@ -157,6 +169,55 @@ class CallService : Service() {
         } catch (e: Exception) {
             Log.e(TAG, "Error showing overlay", e)
         }
+    }
+
+    private fun setupSwipeToDismiss(overlayView: View) {
+        var initialY = 0f
+        var initialTouchY = 0f
+        var isDragging = false
+        val dismissThreshold = 200f // pixels to swipe before dismissing
+
+        overlayView.setOnTouchListener { view, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    initialY = view.y
+                    initialTouchY = event.rawY
+                    isDragging = false
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val deltaY = event.rawY - initialTouchY
+
+                    // Only allow upward swipes to dismiss
+                    if (deltaY < 0) {
+                        view.y = initialY + deltaY
+                        isDragging = true
+                    }
+                    true
+                }
+                MotionEvent.ACTION_UP -> {
+                    val deltaY = event.rawY - initialTouchY
+
+                    if (isDragging && abs(deltaY) > dismissThreshold) {
+                        // Swipe threshold met, dismiss the overlay
+                        Log.d(TAG, "Swipe to dismiss triggered")
+                        dismissOverlay()
+                    } else {
+                        // Snap back to original position
+                        view.animate().y(initialY).duration = 200
+                    }
+                    true
+                }
+                else -> false
+            }
+        }
+    }
+
+    private fun dismissOverlay() {
+        Log.d(TAG, "Dismissing overlay (call continues ringing)")
+        removeAllOverlays()
+        // Note: We don't call stopSelf() here because the call is still active
+        // The service will continue running and listening for call state changes
     }
 
     private fun removeAllOverlays() {

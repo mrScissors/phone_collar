@@ -1,95 +1,92 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#80000000">
+    android:layout_height="wrap_content"
+    android:background="#E0000000"
+    android:padding="20dp">
 
-    <!-- Title text at the top of screen -->
-    <TextView
-        android:id="@+id/txtTitle"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="YK Phone Collar"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:textColor="#FFFFFF"
-        android:gravity="center"
+    <!-- Cross/Dismiss button in upper right corner -->
+    <Button
+        android:id="@+id/btnDismiss"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
         android:layout_alignParentTop="true"
-        android:padding="16dp" />
+        android:layout_alignParentEnd="true"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="4dp"
+        android:background="#80000000"
+        android:text="✕"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:padding="0dp"
+        android:minWidth="0dp"
+        android:minHeight="0dp" />
 
-    <!-- Tile positioned below the title -->
+    <!-- Main content container -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="32dp"
-        android:layout_below="@id/txtTitle"
-        android:background="@drawable/rounded_background"
+        android:layout_below="@id/btnDismiss"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
         android:orientation="vertical">
 
-        <LinearLayout
-            android:layout_width="match_parent"
+        <!-- Caller information -->
+        <TextView
+            android:id="@+id/txtCallerName"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="24dp">
+            android:text="Identifying..."
+            android:textColor="#FFFFFF"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:layout_marginBottom="8dp" />
 
-            <!-- Caller information -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:layout_marginBottom="24dp">
+        <TextView
+            android:id="@+id/txtIncomingNumber"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Unknown"
+            android:textColor="#CCCCCC"
+            android:textSize="18sp"
+            android:gravity="center"
+            android:layout_marginBottom="24dp" />
 
-                <TextView
-                    android:id="@+id/txtCallerName"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Unknown"
-                    android:textSize="22sp"
-                    android:textStyle="bold"
-                    android:textColor="#000000"
-                    android:gravity="center" />
+        <!-- Action buttons -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center">
 
-                <TextView
-                    android:id="@+id/txtIncomingNumber"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="+1234567890"
-                    android:textSize="18sp"
-                    android:textColor="#444444"
-                    android:layout_marginTop="8dp"
-                    android:gravity="center" />
-            </LinearLayout>
+            <!-- Reject button -->
+            <Button
+                android:id="@+id/btnReject"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:layout_marginEnd="40dp"
+                android:background="#F44336"
+                android:text="✕"
+                android:textColor="#FFFFFF"
+                android:textSize="24sp"
+                android:textStyle="bold" />
 
-            <!-- Button controls -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center">
+            <!-- Answer button -->
+            <Button
+                android:id="@+id/btnAnswer"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:background="#4CAF50"
+                android:text="✓"
+                android:textColor="#FFFFFF"
+                android:textSize="24sp"
+                android:textStyle="bold" />
 
-                <Button
-                    android:id="@+id/btnReject"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Reject"
-                    android:textColor="#FFFFFF"
-                    android:backgroundTint="#E53935"
-                    android:padding="16dp"
-                    android:layout_marginEnd="8dp" />
-
-                <Button
-                    android:id="@+id/btnAnswer"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Answer"
-                    android:textColor="#FFFFFF"
-                    android:backgroundTint="#43A047"
-                    android:padding="16dp"
-                    android:layout_marginStart="8dp" />
-            </LinearLayout>
         </LinearLayout>
+
     </LinearLayout>
+
 </RelativeLayout>

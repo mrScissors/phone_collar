@@ -1,0 +1,2 @@
+C:/Users/sudhi/OneDrive/Desktop/Flutter/phone_collar/phone_collar/android/app/.cxx/Debug/4nm4s10e/x86/CMakeFiles/edit_cache.dir
+C:/Users/sudhi/OneDrive/Desktop/Flutter/phone_collar/phone_collar/android/app/.cxx/Debug/4nm4s10e/x86/CMakeFiles/rebuild_cache.dir
