@@ -4,6 +4,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:phone_collar/callHandler.dart';
+import 'package:phone_collar/services/firebase_service.dart';
 import 'package:phone_collar/utils/phone_number_formatter.dart';
 import 'services/notification_service.dart';
 import 'services/local_db_service.dart';
@@ -50,6 +51,8 @@ Future<void> main() async {
   // Initialize local DB
   final localDbService = LocalDbService();
   await localDbService.initialize();
+
+  final firebaseService = FirebaseService();
   final callHandler = CallHandler();
   callHandler.setupMethodChannelHandler();
   CallHandler.initializeLocalDbService(localDbService);
@@ -91,7 +94,7 @@ Future<void> main() async {
   // Run the app
   runApp(MyApp(
     localDbService: localDbService,
-    authService: authService,
+    authService: authService, firebaseService: firebaseService,
   ));
 }
 
@@ -104,12 +107,13 @@ Future<void> requestCallLogPermission() async {
 /// Root widget of the app.
 class MyApp extends StatefulWidget {
   final LocalDbService localDbService;
+  final FirebaseService firebaseService;
   final AuthService authService;
 
   const MyApp({
     Key? key,
     required this.localDbService,
-    required this.authService,
+    required this.authService, required this.firebaseService,
   }) : super(key: key);
 
   @override
@@ -137,6 +141,7 @@ class _MyAppState extends State<MyApp> {
       routes: {
         '/': (ctx) => SplashScreen(
           localDbService: widget.localDbService,
+          firebaseService: widget.firebaseService,
           authService: widget.authService,
         ),
       },

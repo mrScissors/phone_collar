@@ -16,13 +16,15 @@ import '../../auth/login_screen.dart';
 import '../../models/caller.dart';
 import 'widgets/call_log_tile.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'widgets/save_contact_form_dialog.dart';
 
 enum SearchType { name, number }
 
 class CallLogsScreen extends StatefulWidget {
   final LocalDbService localDbService;
+  final FirebaseService firebaseService;
   final AuthService authService;
-  const CallLogsScreen({Key? key, required this.localDbService, required this.authService}) : super(key: key);
+  const CallLogsScreen({Key? key, required this.localDbService, required this.authService, required this.firebaseService}) : super(key: key);
 
   @override
   _CallLogsScreenState createState() => _CallLogsScreenState();
@@ -30,7 +32,6 @@ class CallLogsScreen extends StatefulWidget {
 
 class _CallLogsScreenState extends State<CallLogsScreen> with WidgetsBindingObserver {
   final CallLogService _callLogService = CallLogService();
-  final FirebaseService _firebaseService = FirebaseService();
   final TextEditingController _searchController = TextEditingController();
 
   List<CallLogEntry> _callLogs = [];
@@ -87,7 +88,7 @@ class _CallLogsScreenState extends State<CallLogsScreen> with WidgetsBindingObse
   }
 
   Future<bool> _initializeFirebase() async {
-    await _firebaseService.initializeWithCallersData();
+    await widget.firebaseService.initializeWithCallersData();
     if (mounted) {
       setState(() {
         _isLoadingFirebase = false;
@@ -163,17 +164,20 @@ class _CallLogsScreenState extends State<CallLogsScreen> with WidgetsBindingObse
         var searchName = formatSearchName(displayName);
 
         var callerLocal = Caller(
-          name: displayName,
-          phoneNumbers: phoneNumbers,
-          searchName: searchName,
-          employeeName: 'PhoneContact',
+            name: displayName,
+            phoneNumbers: phoneNumbers,
+            searchName: searchName,
+            employeeName: 'PhoneContact',
+            location: '',
+            date: DateTime(2000,1,1)
         );
+
         callers.add(callerLocal);
       }
 
       // Fetch any server contacts from Firebase and add them in
       final (success, contacts) =
-      await _firebaseService.getAllContacts(context: context);
+      await widget.firebaseService.getAllContacts(context: context);
 
       callers.addAll(contacts);
 
@@ -220,7 +224,7 @@ class _CallLogsScreenState extends State<CallLogsScreen> with WidgetsBindingObse
   }
 
   Future<void> _initializeData() async {
-    await _firebaseService.initializeWithCallersData();
+    await widget.firebaseService.initializeWithCallersData();
     await _fetchCallLogs();
   }
 
@@ -252,212 +256,14 @@ class _CallLogsScreenState extends State<CallLogsScreen> with WidgetsBindingObse
     });
   }
 
-  void showAddContactForm({String? prefillNumber}) {
-    // Capture the parent context.
-    final parentContext = context;
-    final nameController = TextEditingController();
-    final employeeNameController = TextEditingController();
-    final phoneNumber1Controller = TextEditingController(
-        text: !containsAlphabet(prefillNumber ?? '') ? prefillNumber : '');
-    final phoneNumber2Controller = TextEditingController();
-    final phoneNumber3Controller = TextEditingController();
-    bool isLoading = false;
+  // Helper method to format date
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
+  }
 
-    showDialog(
-      context: parentContext,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: Text('Add New Contact',
-                  style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary)),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: nameController,
-                      decoration: InputDecoration(
-                        labelText: 'Contact Name',
-                        prefixIcon: Icon(Icons.person,
-                            color: Theme.of(context).colorScheme.primary),
-                        labelStyle: TextStyle(
-                            color: Theme.of(context).colorScheme.primary),
-                        focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(
-                              color: Theme.of(context).colorScheme.primary),
-                        ),
-                      ),
-                      keyboardType: TextInputType.name,
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: phoneNumber1Controller,
-                      decoration: InputDecoration(
-                        labelText: 'Phone Number 1 (required)',
-                        prefixIcon: Icon(Icons.phone,
-                            color: Theme.of(context).colorScheme.primary),
-                        labelStyle: TextStyle(
-                            color: Theme.of(context).colorScheme.primary),
-                        focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(
-                              color: Theme.of(context).colorScheme.primary),
-                        ),
-                      ),
-                      keyboardType: TextInputType.phone,
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: phoneNumber2Controller,
-                      decoration: InputDecoration(
-                        labelText: 'Phone Number 2 (optional)',
-                        prefixIcon: Icon(Icons.phone,
-                            color: Theme.of(context).colorScheme.primary),
-                        labelStyle: TextStyle(
-                            color: Theme.of(context).colorScheme.primary),
-                        focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(
-                              color: Theme.of(context).colorScheme.primary),
-                        ),
-                      ),
-                      keyboardType: TextInputType.phone,
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: phoneNumber3Controller,
-                      decoration: InputDecoration(
-                        labelText: 'Phone Number 3 (optional)',
-                        prefixIcon: Icon(Icons.phone,
-                            color: Theme.of(context).colorScheme.primary),
-                        labelStyle: TextStyle(
-                            color: Theme.of(context).colorScheme.primary),
-                        focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(
-                              color: Theme.of(context).colorScheme.primary),
-                        ),
-                      ),
-                      keyboardType: TextInputType.phone,
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: employeeNameController,
-                      decoration: InputDecoration(
-                        labelText: 'Employee Name',
-                        prefixIcon: Icon(Icons.badge,
-                            color: Theme.of(context).colorScheme.primary),
-                        labelStyle: TextStyle(
-                            color: Theme.of(context).colorScheme.primary),
-                        focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(
-                              color: Theme.of(context).colorScheme.primary),
-                        ),
-                      ),
-                      keyboardType: TextInputType.name,
-                    ),
-                    if (isLoading)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 20.0),
-                        child: CircularProgressIndicator(
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    // Dismiss keyboard before closing.
-                    FocusScope.of(context).unfocus();
-                    Navigator.of(context).pop();
-                  },
-                  child: Text('Cancel',
-                      style: TextStyle(
-                          color: Theme.of(context).colorScheme.primary)),
-                ),
-                TextButton(
-                  onPressed: isLoading
-                      ? null
-                      : () async {
-                    // Dismiss keyboard.
-                    FocusScope.of(context).unfocus();
-
-                    final name = nameController.text.trim();
-                    final employeeName = employeeNameController.text.trim();
-                    final phone1 = formatPhoneNumber(phoneNumber1Controller.text.trim());
-
-                    if (name.isEmpty || phone1.isEmpty) {
-                      ScaffoldMessenger.of(parentContext).showSnackBar(
-                        const SnackBar(
-                          content: Text('Name and Phone Number 1 are required'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                      return;
-                    }
-
-                    setState(() {
-                      isLoading = true;
-                    });
-
-                    try {
-                      List<String> phoneNumbers = [];
-                      if (phone1.isNotEmpty) phoneNumbers.add(phone1);
-
-                      final phone2 = formatPhoneNumber(phoneNumber2Controller.text.trim());
-                      if (phone2.isNotEmpty) phoneNumbers.add(phone2);
-
-                      final phone3 = formatPhoneNumber(phoneNumber3Controller.text.trim());
-                      if (phone3.isNotEmpty) phoneNumbers.add(phone3);
-
-                      final searchName = formatSearchName(name);
-                      final caller = Caller(
-                        name: name,
-                        employeeName: employeeName,
-                        phoneNumbers: phoneNumbers,
-                        searchName: searchName,
-                      );
-
-                      await widget.localDbService.saveContact(caller);
-                      await _firebaseService.addContact(caller);
-
-                      // Close the dialog.
-                      Navigator.of(context).pop();
-
-                      // Use the parent context to show the Snackbar.
-                      ScaffoldMessenger.of(parentContext).showSnackBar(
-                        const SnackBar(
-                          content: Text('Contact added successfully'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                    } catch (e) {
-                      print('Error adding contact: $e');
-                      ScaffoldMessenger.of(parentContext).showSnackBar(
-                        SnackBar(
-                          content: Text('Failed to add contact: ${e.toString()}'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                    } finally {
-                      if (mounted) {
-                        setState(() {
-                          isLoading = false;
-                        });
-                      }
-                    }
-                  },
-                  child: Text('Save',
-                      style: TextStyle(
-                          color: Theme.of(context).colorScheme.primary)),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
+  // Helper method to check if date should be displayed
+  bool _shouldShowDate(DateTime date) {
+    return date.isAfter(DateTime(2000, 1, 1));
   }
 
   @override
@@ -488,25 +294,11 @@ class _CallLogsScreenState extends State<CallLogsScreen> with WidgetsBindingObse
               'Sync Contacts',
               style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
             ),
-            onPressed: syncContacts,
+            onPressed: () => syncContacts(),
           ),
           // Three dot menu for additional options like Logout.
           PopupMenuButton<String>(
             icon: Icon(Icons.more_vert, color: Theme.of(context).colorScheme.onPrimary),
-            onSelected: (value) async {
-              if (value == 'logout') {
-                await widget.authService.signOut();
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(
-                    builder: (context) => LoginScreen(
-                      authService: widget.authService,
-                      localDbService: widget.localDbService,
-                    ),
-                  ),
-                      (Route<dynamic> route) => false,
-                );
-              }
-            },
             itemBuilder: (BuildContext context) => [
               PopupMenuItem<String>(
                 value: 'logout',
@@ -564,10 +356,16 @@ class _CallLogsScreenState extends State<CallLogsScreen> with WidgetsBindingObse
       ),
       body: _buildBody(),
       floatingActionButton: FloatingActionButton(
-        onPressed: showAddContactForm,
+        onPressed: () async {
+          await showAddContactForm(
+              context: context,
+              localDbService: widget.localDbService,
+              firebaseService: widget.firebaseService
+          );
+        },
         tooltip: 'Add Contact',
-        backgroundColor: Theme.of(context).colorScheme.primary, // Orange
-        foregroundColor: Theme.of(context).colorScheme.onPrimary, // Black
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
         child: const Icon(Icons.person_add),
       ),
     );
@@ -635,6 +433,7 @@ class _CallLogsScreenState extends State<CallLogsScreen> with WidgetsBindingObse
     }
   }
 
+
   Widget _buildBody() {
     if (_isSearching) {
       if (_searchResults.isEmpty) {
@@ -679,7 +478,14 @@ class _CallLogsScreenState extends State<CallLogsScreen> with WidgetsBindingObse
               ),
               const SizedBox(height: 20),
               ElevatedButton.icon(
-                onPressed: () => showAddContactForm(prefillNumber: _searchController.text),
+                onPressed: () async {
+                  await showAddContactForm(
+                      context: context,
+                      localDbService: widget.localDbService,
+                      firebaseService: widget.firebaseService,
+                      prefillNumber: _searchController.text
+                  );
+                },
                 icon: const Icon(Icons.person_add),
                 label: const Text('Add Contact'),
                 style: ElevatedButton.styleFrom(
@@ -696,20 +502,80 @@ class _CallLogsScreenState extends State<CallLogsScreen> with WidgetsBindingObse
           itemBuilder: (context, index) {
             final caller = _searchResults[index];
             final List<String> numbers = caller.phoneNumbers.where((number) => number.trim().isNotEmpty).toList();
+
+            // Build additional info widgets
+            List<Widget> additionalInfo = [];
+
+            // Add location if not empty
+            if (caller.location.isNotEmpty) {
+              additionalInfo.add(
+                Padding(
+                  padding: const EdgeInsets.only(top: 2.0),
+                  child: Row(
+                    children: [
+                      Icon(Icons.location_on, size: 12, color: Colors.grey),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          caller.location,
+                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            // Add date if it's after January 1, 2000
+            if (_shouldShowDate(caller.date)) {
+              additionalInfo.add(
+                Padding(
+                  padding: const EdgeInsets.only(top: 2.0),
+                  child: Row(
+                    children: [
+                      Icon(Icons.calendar_today, size: 12, color: Colors.grey),
+                      const SizedBox(width: 4),
+                      Text(
+                        _formatDate(caller.date),
+                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            // Add employee name if not empty
+            if (caller.employeeName.isNotEmpty && caller.employeeName != 'PhoneContact') {
+              additionalInfo.add(
+                Padding(
+                  padding: const EdgeInsets.only(top: 2.0),
+                  child: Row(
+                    children: [
+                      Icon(Icons.work, size: 12, color: Colors.grey),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          'Employee: ${caller.employeeName}',
+                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
             return ListTile(
               title: Text(caller.name),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(numbers.isNotEmpty ? numbers.join(', ') : 'No Number'),
-                  if (caller.employeeName.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4.0),
-                      child: Text(
-                        'Employee: ${caller.employeeName}',
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                    ),
+                  ...additionalInfo,
                 ],
               ),
               trailing: Row(
@@ -751,8 +617,10 @@ class _CallLogsScreenState extends State<CallLogsScreen> with WidgetsBindingObse
       return ListView.builder(
         itemCount: _filteredCallLogs.length,
         itemBuilder: (context, index) => CallLogTile(
-          callLogEntry: _filteredCallLogs[index],
-          localDbService: widget.localDbService,
+            callLogEntry: _filteredCallLogs[index],
+            localDbService: widget.localDbService,
+            firebaseService: widget.firebaseService,
+            onRefreshNeeded: () => _fetchCallLogs()
         ),
       );
     }

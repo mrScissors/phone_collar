@@ -1,5 +1,7 @@
+
 // splash_screen.dart
 import 'package:flutter/material.dart';
+import 'package:phone_collar/services/firebase_service.dart';
 import 'login_screen.dart';
 import 'auth_service.dart';
 import '../app.dart';
@@ -7,12 +9,13 @@ import '../services/local_db_service.dart';
 
 class SplashScreen extends StatefulWidget {
   final LocalDbService localDbService;
+  final FirebaseService firebaseService;
   final AuthService authService;
 
   const SplashScreen({
     Key? key,
     required this.localDbService,
-    required this.authService,
+    required this.authService, required this.firebaseService,
   }) : super(key: key);
 
   @override
@@ -40,6 +43,7 @@ class _SplashScreenState extends State<SplashScreen> {
       MaterialPageRoute(
         builder: (context) => CallLogApp(
           localDbService: widget.localDbService,
+          firebaseService: widget.firebaseService,
           authService: widget.authService,
         ),
       ),

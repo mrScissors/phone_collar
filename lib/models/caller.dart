@@ -1,16 +1,21 @@
 import '../utils/phone_number_formatter.dart';
+import 'package:intl/intl.dart';
 
 class Caller {
   final List<String> phoneNumbers;
   final String name;
   final String searchName;
   final String employeeName;
+  final String location;
+  final DateTime date;
 
   const Caller({
     required this.phoneNumbers,
     required this.name,
     required this.searchName,
-    required this.employeeName
+    required this.employeeName,
+    required this.location,
+    required this.date
   });
 
   factory Caller.fromMapRemoteDb(Map<dynamic, dynamic> map) {
@@ -58,7 +63,13 @@ class Caller {
       phoneNumbersMapped.add(phone3.trim());
     }
 
-  return Caller(
+    String location = map['location'] != null?map['location'] as String: '';
+
+    DateFormat format = DateFormat("dd/MM/yyyy");
+    DateTime date = map['date'] != null? format.parse(map['date'] as String): DateTime(2000, 1,1);
+
+
+    return Caller(
         phoneNumbers: phoneNumbersMapped
             .whereType<String>()
             .map((number) => number.trim())
@@ -67,16 +78,22 @@ class Caller {
         name: fullName,
         searchName: map['searchName'],
         employeeName: map['employeeName'] as String? ?? '',
+        location: location,
+        date: date
     );
   }
 
 
   factory Caller.fromMapLocalDb(Map<dynamic, dynamic> map) {
+    DateFormat format = DateFormat("dd/MM/yyyy");
     return Caller(
         phoneNumbers: map['phoneNumbers'].split(','),
         name: map['name'] as String? ?? 'Unknown',
         searchName: map['searchName'] as String? ?? '',
         employeeName: map['employeeName'] as String? ?? '',
+        location: map['location']!=null? map['location'] as String:'',
+        date : map['date'] != null?format.parse(map['date'] as String):DateTime(2000, 1,1)
+
     );
   }
 
@@ -87,16 +104,20 @@ class Caller {
       'Phone 3 - Value': (phoneNumbers != null && phoneNumbers.length > 2) ? phoneNumbers[2] : '',
       'First Name': name,
       'searchName': searchName,
-      'employeeName': employeeName
+      'employeeName': employeeName,
+      'location': location,
+      'date': date.day.toString() + '/' + date.month.toString() + '/' + date.year.toString()
     };
   }
 
   Map<String, dynamic> toMapLocalDb() {
     return {
-      'phoneNumbers': phoneNumbers.join(','),
       'name': name,
+      'phoneNumbers': phoneNumbers.join(','),
       'searchName': searchName,
-      'employeeName': employeeName
+      'employeeName': employeeName,
+      'location': location,
+      'date': date.day.toString() + '/' + date.month.toString() + '/' + date.year.toString()
     };
   }
 }

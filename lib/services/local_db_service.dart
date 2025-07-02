@@ -25,7 +25,9 @@ class LocalDbService {
             name TEXT,
             phoneNumbers TEXT,
             searchName TEXT,
-            employeeName TEXT
+            employeeName TEXT,
+            location TEXT,
+            date TEXT
           )
           ''',
         );
@@ -43,7 +45,9 @@ class LocalDbService {
       name TEXT,
       phoneNumbers TEXT,
       searchName TEXT,
-      employeeName TEXT
+      employeeName TEXT,
+      location TEXT,
+      date TEXT
     )
   ''');
   }
@@ -53,14 +57,20 @@ class LocalDbService {
 
     final batch = _database!.batch();
     for (final contact in contacts) {
-      batch.insert(
+      var dataToInsert = contact.toMapLocalDb();
+      batch.insert(_tableName, dataToInsert,
+      /*
         _tableName,
         {
           'name': contact.name,
           'phoneNumbers': contact.phoneNumbers.join(', '),
           'searchName': contact.searchName,
-          'employeeName': contact.employeeName
-        },
+          'employeeName': contact.employeeName,
+          'location': contact.location,
+          'date': contact.date.
+        }
+        ,
+       */
         conflictAlgorithm: ConflictAlgorithm.ignore, // Prevent overwriting
       );
     }
@@ -246,16 +256,21 @@ class LocalDbService {
   Future<void> saveContact(Caller caller) async {
     try {
       if (_database == null) await initialize();
-      final phoneNumbersForLocalDb = caller.phoneNumbers.join(',');
-      await _database!.insert(
+      var dataToInsert = caller.toMapLocalDb();
+      await _database!.insert(_tableName, dataToInsert);
+        /*
         _tableName,
         {
           'name': caller.name,
           'searchName': caller.searchName,
           'phoneNumbers': phoneNumbersForLocalDb,
-          'employeeName': caller.employeeName
+          'employeeName': caller.employeeName,
+          'location': caller.location,
+          'date': caller.date
         },
       );
+
+         */
       print('Contact saved to local DB: ${caller.name}');
     } catch (e) {
       print('Error saving contact to local DB: $e');

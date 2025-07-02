@@ -2,14 +2,16 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:phone_collar/auth/auth_service.dart';
+import 'package:phone_collar/services/firebase_service.dart';
 import 'package:phone_collar/services/local_db_service.dart';
 import 'callLogsAndSearch.dart';
 import 't9dialer.dart';
 
 class HomeScreen extends StatefulWidget {
   final LocalDbService localDbService;
+  final FirebaseService firebaseService;
   final AuthService authService;
-  const HomeScreen({Key? key, required this.localDbService, required this.authService}) : super(key: key);
+  const HomeScreen({Key? key, required this.localDbService, required this.authService, required this.firebaseService}) : super(key: key);
 
   @override
   _HomeScreenState createState() => _HomeScreenState();
@@ -31,8 +33,8 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final List<Widget> _pages = [
-      T9DialerScreen(localDbService: widget.localDbService),
-      CallLogsScreen(localDbService: widget.localDbService, authService: widget.authService,)
+      T9DialerScreen(localDbService: widget.localDbService, firebaseService: widget.firebaseService,),
+      CallLogsScreen(localDbService: widget.localDbService, firebaseService: widget.firebaseService, authService: widget.authService,)
     ];
     return Scaffold(
       body: _pages[_currentIndex],

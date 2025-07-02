@@ -1,17 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:call_log/call_log.dart';
+import 'package:phone_collar/services/firebase_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../models/caller.dart';
 import '../../../services/local_db_service.dart';
+import '../../../utils/search_name_formatter.dart';
+import 'save_contact_form_dialog.dart';
 
 class CallLogTile extends StatelessWidget {
   final CallLogEntry callLogEntry;
   final LocalDbService localDbService;
+  final FirebaseService firebaseService;
+  final VoidCallback? onRefreshNeeded;
 
   const CallLogTile({
     super.key,
     required this.callLogEntry,
-    required this.localDbService,
+    required this.localDbService, required this.firebaseService, this.onRefreshNeeded,
   });
 
   Future<void> _makePhoneCall(String phoneNumber) async {
@@ -48,10 +53,30 @@ class CallLogTile extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  displayName,
-                  style: theme.textTheme.titleLarge?.copyWith(color: onBackgroundColor),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        displayName,
+                        style: theme.textTheme.titleLarge?.copyWith(color: onBackgroundColor),
+                      ),
+                    ),
+                    if (displayName == phoneNumber)
+                      TextButton.icon(
+                        onPressed: () async {
+                          Navigator.pop(context); // Close bottom sheet
+                          bool contactSaved = await showAddContactForm(context: context, localDbService: localDbService, firebaseService:  firebaseService, prefillNumber: phoneNumber);
+                          if (contactSaved) {
+                            onRefreshNeeded?.call(); // Only refresh if contact was actually saved
+                          }
+                        },
+                        icon: Icon(Icons.person_add, color: primaryColor),
+                        label: Text("Save", style: TextStyle(color: primaryColor)),
+                      ),
+                  ],
                 ),
+
                 Text(
                   phoneNumber,
                   style: theme.textTheme.titleMedium?.copyWith(
@@ -136,6 +161,7 @@ class CallLogTile extends StatelessWidget {
     );
   }
 
+
   Future<List<CallLogEntry>> fetchCallLogs(String phoneNumber) async {
     // No changes needed here
     try {
@@ -168,6 +194,7 @@ class CallLogTile extends StatelessWidget {
         return Icons.call;
     }
   }
+
 
   @override
   Widget build(BuildContext context) {

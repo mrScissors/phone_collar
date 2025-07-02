@@ -95,6 +95,7 @@ class FirebaseService {
       final contacts = await FlutterContacts.getContacts(withProperties: true);
 
       // 4) Loop through each contact and check if any phone matches user’s query
+      /*
       for (Contact contact in contacts) {
         for (var phone in contact.phones) {
           final formattedContactNumber = formatPhoneNumber(phone.number);
@@ -114,6 +115,8 @@ class FirebaseService {
         }
       }
 
+
+       */
       // ------------------------------------------------
       // If not found in local device, now search Firebase
       // ------------------------------------------------
